@@ -1,0 +1,357 @@
+/* ==========================================================================
+   ShieldStat - Premium Dark Charcoal & Dark Blue Theme
+   ========================================================================== */
+
+:root {
+    /* Charcoal Palette */
+    --bg-base: #101114;
+    --bg-surface: #17181e;
+    --bg-card: #1c1e25;
+    --bg-elevated: #22252e;
+    --bg-input: #15161b;
+    --border-subtle: #272a34;
+    --border-strong: #333846;
+
+    /* Dark Blue Accent Palette */
+    --accent-blue-deep: #132448;
+    --accent-blue-dark: #1e3a8a;
+    --accent-blue-primary: #1d4ed8;
+    --accent-blue-vibrant: #2563eb;
+    --accent-blue-light: #60a5fa;
+    --accent-blue-glow: rgba(37, 99, 235, 0.22);
+    --accent-blue-border: rgba(59, 130, 246, 0.28);
+
+    /* Text Colors */
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #848e9f;
+    --text-dim: #545c6b;
+}
+
+/* Custom Base Styles */
+body {
+    background-color: var(--bg-base);
+    color: var(--text-secondary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Premium Scrollbars */
+::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2a2e3a;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3b4253;
+}
+
+/* Charcoal Surfaces & Cards */
+.bg-charcoal-base { background-color: var(--bg-base); }
+.bg-charcoal-surface { background-color: var(--bg-surface); }
+.bg-charcoal-card { background-color: var(--bg-card); }
+.bg-charcoal-elevated { background-color: var(--bg-elevated); }
+.bg-charcoal-input { background-color: var(--bg-input); }
+
+.border-charcoal-subtle { border-color: var(--border-subtle); }
+.border-charcoal-strong { border-color: var(--border-strong); }
+
+/* Premium Card Shadows & Highlights */
+.card-premium {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.875rem;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-premium:hover {
+    border-color: rgba(59, 130, 246, 0.35);
+    box-shadow: 0 8px 25px -4px rgba(0, 0, 0, 0.6), 0 0 15px -3px rgba(30, 58, 138, 0.2);
+}
+
+/* Dark Blue Accents */
+.accent-blue-button {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    color: #ffffff;
+    box-shadow: 0 3px 12px rgba(29, 78, 216, 0.3);
+    transition: all 0.2s ease;
+}
+
+.accent-blue-button:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    border-color: rgba(147, 197, 253, 0.5);
+    box-shadow: 0 4px 18px rgba(37, 99, 235, 0.45);
+    transform: translateY(-1px);
+}
+
+.accent-blue-button:active {
+    transform: translateY(0);
+}
+
+.accent-blue-pill {
+    background: rgba(30, 58, 138, 0.35);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    color: #93c5fd;
+}
+
+.accent-amber-pill {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #fcd34d;
+}
+
+.accent-emerald-pill {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    color: #6ee7b7;
+}
+
+.accent-rose-pill {
+    background: rgba(244, 63, 94, 0.18);
+    border: 1px solid rgba(244, 63, 94, 0.35);
+    color: #fda4af;
+}
+
+.accent-blue-icon-box {
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.4) 0%, rgba(29, 78, 216, 0.25) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+}
+
+/* Sidebar Navigation Active & Inactive */
+.nav-link {
+    transition: all 0.18s ease;
+    border-left: 3px solid transparent;
+}
+
+.nav-link.active-nav {
+    background: linear-gradient(90deg, rgba(30, 58, 138, 0.45) 0%, rgba(23, 37, 84, 0.2) 100%);
+    border-left-color: #3b82f6;
+    color: #ffffff !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.nav-link:not(.active-nav):hover {
+    background-color: rgba(255, 255, 255, 0.04);
+    color: #f1f5f9;
+}
+
+/* Inputs & Form Elements */
+input, select, textarea {
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-subtle) !important;
+    color: #f8fafc !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: #2563eb !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25) !important;
+}
+
+/* Table Styling */
+.premium-table th {
+    background-color: #15171d;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.premium-table td {
+    border-bottom: 1px solid rgba(39, 42, 52, 0.6);
+    color: #e2e8f0;
+}
+
+.premium-table tr:hover td {
+    background-color: rgba(30, 58, 138, 0.12);
+}
+
+/* Stat Tracker Counter Cards */
+.stat-counter-card {
+    background-color: #17181e;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.75rem;
+    padding: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.stat-counter-card:hover {
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.stat-btn {
+    width: 2.15rem;
+    height: 2.15rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.stat-btn:active {
+    transform: scale(0.92);
+}
+
+.stat-btn-plus {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    box-shadow: 0 2px 8px rgba(29, 78, 216, 0.35);
+}
+
+.stat-btn-plus:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    box-shadow: 0 3px 12px rgba(37, 99, 235, 0.5);
+}
+
+.stat-btn-minus {
+    background-color: #121318;
+    color: #848e9f;
+    border: 1px solid var(--border-subtle);
+}
+
+.stat-btn-minus:hover {
+    background-color: #20232b;
+    color: #f8fafc;
+    border-color: #3f4657;
+}
+
+/* Date Preset Buttons */
+.date-preset-btn {
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background-color: #17181e;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+}
+
+.date-preset-btn:hover {
+    background-color: #20242e;
+    color: #ffffff;
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+.date-preset-btn.active {
+    background: rgba(30, 58, 138, 0.35);
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+/* Officer Card Styling */
+.officer-profile-card {
+    background-color: #17181e;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.875rem;
+    padding: 1.25rem;
+    transition: all 0.2s ease;
+}
+
+.officer-profile-card:hover {
+    border-color: rgba(59, 130, 246, 0.45);
+    box-shadow: 0 8px 25px -4px rgba(0, 0, 0, 0.5);
+}
+
+/* Modal & Full-screen Page Backdrop Blur */
+.modal-backdrop {
+    background: rgba(8, 9, 11, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Custom Toast Notification */
+#toastNotification {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+/* Print Stylesheet for Reports */
+@media print {
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 11px !important;
+    }
+
+    header, aside, #statTrackerPage, .no-print, button, .date-preset-btn, input, select, .hidden, .print-hide, #departmentCallsAuditSection.print-hide {
+        display: none !important;
+    }
+
+    main {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .card-premium {
+        background: #ffffff !important;
+        border: 1px solid #d1d5db !important;
+        box-shadow: none !important;
+        color: #000000 !important;
+        padding: 14px !important;
+    }
+
+    .card-premium * {
+        color: #000000 !important;
+    }
+
+    table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+        font-size: 10px !important;
+    }
+
+    th {
+        background-color: #f3f4f6 !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #111827 !important;
+        font-weight: 700 !important;
+        padding: 4px 6px !important;
+    }
+
+    td {
+        border: 1px solid #e5e7eb !important;
+        color: #1f2937 !important;
+        padding: 4px 6px !important;
+    }
+
+    .report-stat-pill {
+        border: 1px solid #e5e7eb !important;
+        background: #f9fafb !important;
+        color: #111827 !important;
+        border-radius: 4px !important;
+        padding: 2px 4px !important;
+    }
+
+    .report-kpi-box {
+        border: 1px solid #d1d5db !important;
+        background: #f9fafb !important;
+    }
+
+    .overflow-x-auto {
+        overflow: visible !important;
+    }
+}

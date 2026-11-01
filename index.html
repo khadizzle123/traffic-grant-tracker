@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShieldStat | Traffic Officer Stat & Grant Tracker</title>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        charcoal: {
+                            950: '#0c0d10',
+                            900: '#111216',
+                            850: '#16171d',
+                            800: '#1c1e25',
+                            750: '#22252e',
+                            700: '#2a2d37',
+                            600: '#383d4a',
+                            500: '#4e5566',
+                            400: '#848e9f',
+                            300: '#cbd5e1',
+                            200: '#e2e8f0',
+                            100: '#f8fafc',
+                        },
+                        navy: {
+                            950: '#080f21',
+                            900: '#0f1f42',
+                            850: '#132448',
+                            800: '#1e3a8a',
+                            700: '#1d4ed8',
+                            600: '#2563eb',
+                            500: '#3b82f6',
+                            400: '#60a5fa',
+                            300: '#93c5fd',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-[#101114] text-[#cbd5e1] font-sans antialiased min-h-screen flex flex-col selection:bg-blue-900 selection:text-white">
+
+    <!-- ============================================================
+         LOGIN OVERLAY — shown until authenticated
+         ============================================================ -->
+    <div id="loginOverlay" class="fixed inset-0 z-[200] flex items-center justify-center bg-[#0c0d10]">
+        <div class="w-full max-w-sm px-6 space-y-8">
+            <!-- Brand -->
+            <div class="text-center space-y-3">
+                <div class="flex justify-center">
+                    <div class="accent-blue-button p-4 rounded-2xl shadow-2xl inline-flex">
+                        <i class="fa-solid fa-shield-halved text-3xl text-white"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-white tracking-tight">ShieldStat</h1>
+                    <p class="text-xs text-[#848e9f] mt-1">Traffic Enforcement &amp; Grant Allocation System</p>
+                </div>
+            </div>
+
+            <!-- Login Card -->
+            <div class="card-premium p-6 space-y-5">
+                <div>
+                    <h2 class="text-sm font-semibold text-white">Officer Sign-In</h2>
+                    <p class="text-xs text-[#848e9f] mt-0.5">Authorized personnel only.</p>
+                </div>
+
+                <div id="loginError" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 flex items-center space-x-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Invalid username or password. Please try again.</span>
+                </div>
+
+                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-[#848e9f] mb-1.5">Username</label>
+                        <input type="text" id="loginUsername" autocomplete="username"
+                            class="w-full px-3 py-2.5 rounded-lg text-xs bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60 placeholder-[#4e5566]"
+                            placeholder="Enter username" required />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-[#848e9f] mb-1.5">Password</label>
+                        <div class="relative">
+                            <input type="password" id="loginPassword" autocomplete="current-password"
+                                class="w-full px-3 py-2.5 rounded-lg text-xs bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60 placeholder-[#4e5566] pr-10"
+                                placeholder="Enter password" required />
+                            <button type="button" onclick="toggleLoginPasswordVisibility()"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-[#848e9f] hover:text-white">
+                                <i id="loginPasswordEyeIcon" class="fa-solid fa-eye text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="accent-blue-button w-full py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center space-x-2 shadow-lg">
+                        <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                        <span>Sign In</span>
+                    </button>
+                </form>
+            </div>
+
+            <p class="text-center text-[11px] text-[#4e5566]">ShieldStat v1.3 &bull; Secured Access</p>
+        </div>
+    </div>
+
+    <!-- Top Navigation Header -->
+    <header class="bg-[#16171e] border-b border-[#272a34] sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            
+            <!-- Brand & Division Title -->
+            <div class="flex items-center space-x-3.5">
+                <div class="accent-blue-button p-2.5 rounded-xl shadow-md flex items-center justify-center">
+                    <i class="fa-solid fa-shield-halved text-xl text-white"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-lg font-bold tracking-tight text-white">ShieldStat</h1>
+                        <span class="text-[11px] font-mono px-2 py-0.5 rounded-md accent-blue-pill font-semibold">v1.3 BUDGET & PAYROLL</span>
+                    </div>
+                    <p class="text-xs text-[#848e9f]">Traffic Enforcement & Grant Allocation System</p>
+                </div>
+            </div>
+            
+            <!-- Header Right Actions & Status -->
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <!-- Active Grant Status Badge -->
+                <div id="headerActiveGrantBadge" class="hidden sm:flex items-center space-x-2.5 bg-[#121318] px-3.5 py-1.5 rounded-lg border border-[#272a34] text-xs">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-[#848e9f]">Active Grant: <strong id="headerGrantName" class="text-white font-medium">HVE-2026</strong></span>
+                </div>
+
+                <!-- Quick Export CSV Button -->
+                <button onclick="exportCSV()" class="hidden md:inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-medium text-[#cbd5e1] bg-[#1c1e25] hover:bg-[#22252e] border border-[#272a34] hover:border-slate-600 transition" title="Export CSV Data">
+                    <i class="fa-solid fa-download text-[#60a5fa]"></i>
+                    <span>Export</span>
+                </button>
+
+                <!-- Quick Log Shift Button -> Opens Stat Tracker Page -->
+                <button onclick="openStatTracker()" class="accent-blue-button px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center space-x-2 shadow-lg">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Log New Shift</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <div class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row gap-6">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-full md:w-64 space-y-4 shrink-0">
+            <!-- Navigation Links -->
+            <nav class="bg-[#17181e] border border-[#272a34] rounded-xl p-2.5 shadow-xl space-y-1">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-link active-nav w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-white transition">
+                    <i class="fa-solid fa-chart-pie w-5 text-[#60a5fa]"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button onclick="openStatTracker()" id="nav-tracker" class="nav-link w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium text-[#848e9f] transition">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-stopwatch-20 w-5 text-[#848e9f]"></i>
+                        <span>Stat Tracker</span>
+                    </div>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-[#60a5fa] border border-blue-500/30">TRACK</span>
+                </button>
+                <button onclick="switchTab('shifts')" id="nav-shifts" class="nav-link w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-[#848e9f] transition">
+                    <i class="fa-solid fa-clipboard-user w-5 text-[#848e9f]"></i>
+                    <span>Shift Logs & Stats</span>
+                </button>
+                <button onclick="switchTab('officers')" id="nav-officers" class="nav-link w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium text-[#848e9f] transition">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-user-shield w-5 text-[#848e9f]"></i>
+                        <span>Officer Profiles</span>
+                    </div>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold" id="sidebarOfficerCount">5</span>
+                </button>
+                <button onclick="switchTab('grants')" id="nav-grants" class="nav-link w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium text-[#848e9f] transition">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-file-invoice-dollar w-5 text-[#848e9f]"></i>
+                        <span>Grant Tracker</span>
+                    </div>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-[#60a5fa] border border-blue-500/30" id="sidebarGrantCount">3</span>
+                </button>
+                <button onclick="switchTab('reports')" id="nav-reports" class="nav-link w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-[#848e9f] transition">
+                    <i class="fa-solid fa-print w-5 text-[#848e9f]"></i>
+                    <span>Reports & Export</span>
+                </button>
+            </nav>
+
+            <!-- Grant Burn Rate & Dept Billed Split Card -->
+            <div class="card-premium p-4 text-xs space-y-3.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-semibold text-[#848e9f] uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-gauge-high text-[#60a5fa]"></i> Grant Burn Rate
+                    </span>
+                    <span class="font-mono text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20" id="sidebarBurnRate">65.8%</span>
+                </div>
+                <!-- Dark blue filled progress bar -->
+                <div class="w-full bg-[#121318] h-2.5 rounded-full overflow-hidden border border-[#272a34]">
+                    <div id="sidebarProgressBar" class="bg-gradient-to-r from-[#1e3a8a] via-[#1d4ed8] to-[#60a5fa] h-full rounded-full transition-all duration-500" style="width: 65.8%"></div>
+                </div>
+                <div class="flex justify-between items-center text-[11px] text-[#848e9f]">
+                    <span>Net Grant: <strong class="text-white font-mono" id="sidebarGrantHours">118.5 hrs</strong></span>
+                    <span>Cap: <strong class="text-[#cbd5e1] font-mono" id="sidebarGrantCap">180.0 hrs</strong></span>
+                </div>
+                <div class="p-2.5 bg-[#121318] rounded-lg border border-[#272a34] text-[11px] space-y-1">
+                    <div class="flex justify-between text-[#848e9f]">
+                        <span>Dept Billed (Assists/Calls):</span>
+                        <strong class="text-amber-400 font-mono" id="sidebarDeptHours">6.0 hrs</strong>
+                    </div>
+                    <div class="flex justify-between text-[#848e9f]">
+                        <span>Total Grant Wages Paid:</span>
+                        <strong class="text-emerald-400 font-mono" id="sidebarTotalGrantSpend">$8,124.00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Division Quick Profile -->
+            <div class="card-premium p-3.5 text-xs flex items-center space-x-3">
+                <div class="accent-blue-icon-box w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-id-badge text-base"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-semibold text-white truncate">Metro Traffic Division</p>
+                    <p class="text-[11px] text-[#848e9f] truncate">Grant Unit • Squad Charlie</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 space-y-6">
+
+            <!-- ============================================================
+                 1. DASHBOARD TAB
+                 ============================================================ -->
+            <section id="tab-dashboard" class="space-y-6">
+                <!-- Top 4 Metric Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    
+                    <!-- Citations Card -->
+                    <div class="card-premium p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-[#848e9f] uppercase tracking-wider">Citations (Month)</span>
+                            <span class="accent-blue-icon-box p-2 rounded-lg">
+                                <i class="fa-solid fa-ticket text-sm"></i>
+                            </span>
+                        </div>
+                        <div class="mt-2.5 flex items-baseline justify-between">
+                            <span class="text-2xl font-bold font-mono text-white" id="stat-citations">0</span>
+                            <span class="text-xs text-emerald-400 font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-arrow-trend-up text-[10px]"></i> On Target
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Net Grant OT Hours Card -->
+                    <div class="card-premium p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-[#848e9f] uppercase tracking-wider">Net Grant Hours</span>
+                            <span class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <i class="fa-solid fa-clock text-sm"></i>
+                            </span>
+                        </div>
+                        <div class="mt-2.5 flex items-baseline justify-between">
+                            <span class="text-2xl font-bold font-mono text-white" id="stat-hours">0.0 hrs</span>
+                            <span class="text-xs text-[#848e9f] font-mono" id="stat-hours-cap">of 180 hrs</span>
+                        </div>
+                    </div>
+
+                    <!-- Traffic Stops Card -->
+                    <div class="card-premium p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-[#848e9f] uppercase tracking-wider">Traffic Stops</span>
+                            <span class="p-2 rounded-lg bg-blue-500/10 text-[#60a5fa] border border-blue-500/20">
+                                <i class="fa-solid fa-car-side text-sm"></i>
+                            </span>
+                        </div>
+                        <div class="mt-2.5 flex items-baseline justify-between">
+                            <span class="text-2xl font-bold font-mono text-white" id="stat-stops">0</span>
+                            <span class="text-xs text-[#93c5fd] font-medium">Safe Contacts</span>
+                        </div>
+                    </div>
+
+                    <!-- Total DUIs Card -->
+                    <div class="card-premium p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-[#848e9f] uppercase tracking-wider">Total DUIs (Alc/Drug)</span>
+                            <span class="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                <i class="fa-solid fa-wine-glass-triangle text-sm"></i>
+                            </span>
+                        </div>
+                        <div class="mt-2.5 flex items-baseline justify-between">
+                            <span class="text-2xl font-bold font-mono text-rose-400" id="stat-duis">0</span>
+                            <span class="text-xs text-rose-400 font-medium">Zero Tolerance</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Metric Row: Non-Grant Calls, Payroll Spent & Felonies -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="card-premium p-3.5 flex items-center justify-between">
+                        <div>
+                            <span class="text-[11px] font-semibold text-[#848e9f] uppercase tracking-wider">Grant Wages Spent</span>
+                            <p class="text-xl font-bold font-mono text-emerald-400 mt-0.5" id="stat-total-wages">$0.00</p>
+                        </div>
+                        <span class="accent-emerald-pill p-2 rounded-lg text-sm">
+                            <i class="fa-solid fa-dollar-sign"></i>
+                        </span>
+                    </div>
+
+                    <div class="card-premium p-3.5 flex items-center justify-between">
+                        <div>
+                            <span class="text-[11px] font-semibold text-[#848e9f] uppercase tracking-wider">Dept Billed (Assists/Calls)</span>
+                            <p class="text-xl font-bold font-mono text-amber-400 mt-0.5" id="stat-dept-hours">0.0 hrs</p>
+                        </div>
+                        <span class="accent-amber-pill p-2 rounded-lg text-sm">
+                            <i class="fa-solid fa-handshake-angle"></i>
+                        </span>
+                    </div>
+
+                    <div class="card-premium p-3.5 flex items-center justify-between">
+                        <div>
+                            <span class="text-[11px] font-semibold text-[#848e9f] uppercase tracking-wider">Felony & Fugitives</span>
+                            <p class="text-xl font-bold font-mono text-white mt-0.5" id="stat-felonies">0</p>
+                        </div>
+                        <span class="accent-blue-pill p-2 rounded-lg text-sm">
+                            <i class="fa-solid fa-handcuffs"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Violation Doughnut Chart -->
+                    <div class="card-premium p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4 border-b border-[#272a34] pb-3">
+                            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                Enforcement Breakdown by Category
+                            </h3>
+                            <span class="text-xs text-[#848e9f] font-mono">Current Period</span>
+                        </div>
+                        <div class="relative flex-1 min-h-[260px] flex items-center justify-center">
+                            <canvas id="violationChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Hours Allocation Chart (Grant vs Dept Billed) -->
+                    <div class="card-premium p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4 border-b border-[#272a34] pb-3">
+                            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                Grant Overtime vs Department Billed Hours
+                            </h3>
+                            <span class="text-xs text-[#848e9f] font-mono">Audit Compliance</span>
+                        </div>
+                        <div class="relative flex-1 min-h-[260px] flex items-center justify-center">
+                            <canvas id="hoursChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Shift Activity Table Card -->
+                <div class="card-premium overflow-hidden">
+                    <div class="p-4 sm:px-6 flex items-center justify-between border-b border-[#272a34]">
+                        <div>
+                            <h3 class="text-sm font-semibold text-white">Recent Shift Activity</h3>
+                            <p class="text-xs text-[#848e9f]">Last 5 recorded traffic enforcement shifts with wage and call separation</p>
+                        </div>
+                        <button onclick="switchTab('shifts')" class="text-xs text-[#60a5fa] hover:text-[#93c5fd] font-medium flex items-center gap-1.5 transition">
+                            <span>View All Shifts</span>
+                            <i class="fa-solid fa-arrow-right text-[11px]"></i>
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs premium-table">
+                            <thead>
+                                <tr>
+                                    <th class="px-5 py-3">Date / Time</th>
+                                    <th class="px-5 py-3">Officer</th>
+                                    <th class="px-5 py-3">Funding</th>
+                                    <th class="px-5 py-3">Hours (Grant / Dept)</th>
+                                    <th class="px-5 py-3">Wages Billed</th>
+                                    <th class="px-5 py-3">Stops</th>
+                                    <th class="px-5 py-3">Citations</th>
+                                    <th class="px-5 py-3">DUIs</th>
+                                    <th class="px-5 py-3">Assists / Calls</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentShiftTableBody" class="divide-y divide-[#272a34]/60">
+                                <!-- Populated dynamically by app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ============================================================
+                 2. SHIFTS TAB
+                 ============================================================ -->
+            <section id="tab-shifts" class="hidden space-y-6">
+                <!-- Filter Bar & Actions Card -->
+                <div class="card-premium p-4 sm:p-5">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="flex flex-wrap items-center gap-3 flex-1">
+                            <!-- Search by Officer -->
+                            <div class="relative min-w-[200px] flex-1 sm:flex-initial">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#848e9f]"></i>
+                                <input type="text" id="filterOfficer" oninput="renderShiftsTable()" placeholder="Filter by officer name or badge..." class="w-full pl-9 pr-3 py-2 text-xs rounded-lg">
+                            </div>
+
+                            <!-- Filter by Shift Type -->
+                            <div class="min-w-[170px]">
+                                <select id="filterShiftType" onchange="renderShiftsTable()" class="w-full px-3 py-2 text-xs rounded-lg">
+                                    <option value="">All Shift Types</option>
+                                    <option value="Grant Overtime">Grant Overtime</option>
+                                    <option value="Regular">Regular Patrol</option>
+                                    <option value="Selective Enforcement">Selective Enforcement</option>
+                                </select>
+                            </div>
+
+                            <!-- Reset Filters -->
+                            <button onclick="resetFilters()" class="px-3 py-2 rounded-lg text-xs font-medium text-[#848e9f] hover:text-white bg-[#1c1e25] border border-[#272a34] hover:bg-[#22252e] transition" title="Clear Filters">
+                                <i class="fa-solid fa-rotate-left mr-1"></i> Reset
+                            </button>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-center space-x-2 shrink-0">
+                            <button onclick="exportCSV()" class="px-3.5 py-2 rounded-lg text-xs font-medium text-[#cbd5e1] bg-[#1c1e25] hover:bg-[#22252e] border border-[#272a34] hover:border-slate-600 transition flex items-center space-x-2">
+                                <i class="fa-solid fa-file-csv text-[#60a5fa]"></i>
+                                <span>Export Full CSV</span>
+                            </button>
+                            <button onclick="openStatTracker()" class="accent-blue-button px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                                <span>Log New Shift</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Full Shift Logs Table Card -->
+                <div class="card-premium overflow-hidden">
+                    <div class="p-4 sm:px-6 flex items-center justify-between border-b border-[#272a34]">
+                        <div>
+                            <h3 class="text-sm font-semibold text-white">Master Enforcement Shift Log</h3>
+                            <p class="text-xs text-[#848e9f]">NHTSA & State DOT compliant shift database with wage and department call hour segregation</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs premium-table">
+                            <thead>
+                                <tr>
+                                    <th class="px-5 py-3">Date / Time</th>
+                                    <th class="px-5 py-3">Officer / Unit</th>
+                                    <th class="px-5 py-3">Funding</th>
+                                    <th class="px-5 py-3">Hours (Net / Dept)</th>
+                                    <th class="px-5 py-3">Grant Wages</th>
+                                    <th class="px-5 py-3">Stops</th>
+                                    <th class="px-5 py-3">Citations</th>
+                                    <th class="px-5 py-3">DUIs</th>
+                                    <th class="px-5 py-3">Assists / Calls</th>
+                                    <th class="px-5 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fullShiftTableBody" class="divide-y divide-[#272a34]/60">
+                                <!-- Populated dynamically by app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ============================================================
+                 3. OFFICER PROFILES TAB (HOURLY WAGE & BUDGETING)
+                 ============================================================ -->
+            <section id="tab-officers" class="hidden space-y-6">
+                <!-- Header with Action -->
+                <div class="card-premium p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-emerald-500">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="accent-emerald-pill px-2.5 py-0.5 rounded text-[11px] font-mono uppercase tracking-wider font-semibold">Budget Management</span>
+                            <span class="text-xs text-[#848e9f]">Personnel Wage Tracking</span>
+                        </div>
+                        <h2 class="text-base sm:text-lg font-bold text-white mt-1">Officer Profiles & Hourly Pay Rates</h2>
+                        <p class="text-xs text-[#848e9f] mt-0.5">Determine exact grant and department payroll spend based on each officer's hourly rate.</p>
+                    </div>
+                    <button onclick="openAddOfficerModal()" class="accent-blue-button px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 self-start md:self-center shadow-lg">
+                        <i class="fa-solid fa-user-plus text-xs"></i>
+                        <span>Add New Officer</span>
+                    </button>
+                </div>
+
+                <!-- Officer Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="card-premium p-4">
+                        <span class="text-[11px] text-[#848e9f] uppercase font-semibold">Active Officers</span>
+                        <p class="text-2xl font-bold font-mono text-white mt-1" id="officersSummaryCount">0</p>
+                    </div>
+                    <div class="card-premium p-4">
+                        <span class="text-[11px] text-[#848e9f] uppercase font-semibold">Total Grant Wages Paid</span>
+                        <p class="text-2xl font-bold font-mono text-emerald-400 mt-1" id="officersSummaryGrantSpent">$0.00</p>
+                    </div>
+                    <div class="card-premium p-4">
+                        <span class="text-[11px] text-[#848e9f] uppercase font-semibold">Dept Billed Payroll (Calls)</span>
+                        <p class="text-2xl font-bold font-mono text-amber-400 mt-1" id="officersSummaryDeptSpent">$0.00</p>
+                    </div>
+                    <div class="card-premium p-4">
+                        <span class="text-[11px] text-[#848e9f] uppercase font-semibold">Average Hourly Rate</span>
+                        <p class="text-2xl font-bold font-mono text-[#60a5fa] mt-1" id="officersSummaryAvgRate">$0.00/hr</p>
+                    </div>
+                </div>
+
+                <!-- Officers Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="officersGrid">
+                    <!-- Populated dynamically by app.js -->
+                </div>
+            </section>
+
+
+            <!-- ============================================================
+                 4. GRANTS TAB (ADD, EDIT, DELETE DYNAMIC GRANTS)
+                 ============================================================ -->
+            <section id="tab-grants" class="hidden space-y-6">
+                <!-- Header with Action -->
+                <div class="card-premium p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-blue-600">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="accent-blue-pill px-2.5 py-0.5 rounded text-[11px] font-mono uppercase tracking-wider font-semibold">Federal & State Programs</span>
+                            <span class="text-xs text-[#848e9f]">Grant Budget Tracking</span>
+                        </div>
+                        <h2 class="text-base sm:text-lg font-bold text-white mt-1">Traffic Safety Grants Management</h2>
+                        <p class="text-xs text-[#848e9f] mt-0.5">Configure funding codes, allocated budgets, hours caps, and audit performance.</p>
+                    </div>
+                    <button onclick="openAddGrantModal()" class="accent-blue-button px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 self-start md:self-center shadow-lg">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span>Add New Grant</span>
+                    </button>
+                </div>
+
+                <!-- Dynamic Grants Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="grantsGrid">
+                    <!-- Populated dynamically by app.js -->
+                </div>
+
+                <!-- Federal Grant Compliance & Audit Checklist -->
+                <div class="card-premium p-5 space-y-4">
+                    <div class="flex items-center justify-between border-b border-[#272a34] pb-3">
+                        <div>
+                            <h3 class="text-sm font-semibold text-white">Department Call & Grant Audit Protection</h3>
+                            <p class="text-xs text-[#848e9f]">Federal regulations require strict deduction of non-grant calls from grant funds</p>
+                        </div>
+                        <span class="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-check"></i> 100% Compliant
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div class="bg-[#121318] p-3.5 rounded-lg border border-[#272a34] flex items-start space-x-3">
+                            <span class="text-amber-400 text-sm mt-0.5"><i class="fa-solid fa-receipt"></i></span>
+                            <div>
+                                <h5 class="font-semibold text-white">Officer Assists & Calls Segregation</h5>
+                                <p class="text-[#848e9f] mt-0.5">Whenever an officer assists a fellow unit or handles a dispatched call, that time is billed to the city/department payroll and deducted from the grant claim.</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-[#121318] p-3.5 rounded-lg border border-[#272a34] flex items-start space-x-3">
+                            <span class="text-emerald-400 text-sm mt-0.5"><i class="fa-solid fa-barcode"></i></span>
+                            <div>
+                                <h5 class="font-semibold text-white">Mandatory Case / CAD Number Audit Trail</h5>
+                                <p class="text-[#848e9f] mt-0.5">Every assist and dispatched call requires a valid CAD / Case Number to pass state DOT audits.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ============================================================
+                 5. REPORTS TAB (DATE RANGE SELECTION & ITEMIZED AUDIT)
+                 ============================================================ -->
+                        <section id="tab-reports" class="hidden space-y-6">
+                <!-- Report Generator Controls Card -->
+                <div class="card-premium p-5 space-y-4 no-print">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#272a34] pb-4">
+                        <div>
+                            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-calendar-days text-[#60a5fa]"></i>
+                                <span>Custom Date Range Grant Reimbursement Report</span>
+                            </h3>
+                            <p class="text-xs text-[#848e9f]">Select any date range to generate, print, or export audit-compliant traffic grant reimbursement sheets</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="window.print()" class="accent-blue-button px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2">
+                                <i class="fa-solid fa-print"></i>
+                                <span>Print / Save PDF</span>
+                            </button>
+                            <button onclick="exportReportCSV()" class="px-3.5 py-2 rounded-lg text-xs font-medium text-[#cbd5e1] bg-[#1c1e25] hover:bg-[#22252e] border border-[#272a34] transition flex items-center space-x-2">
+                                <i class="fa-solid fa-file-csv text-[#60a5fa]"></i>
+                                <span>Export Range CSV</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Date Range Pickers & Quick Presets -->
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                            <div>
+                                <label class="block text-[#cbd5e1] font-semibold mb-1">Start Date</label>
+                                <input type="date" id="reportStartDate" onchange="renderReportSummary()" class="w-full px-3 py-2 rounded-lg font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-[#cbd5e1] font-semibold mb-1">End Date</label>
+                                <input type="date" id="reportEndDate" onchange="renderReportSummary()" class="w-full px-3 py-2 rounded-lg font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-[#cbd5e1] font-semibold mb-1">Filter by Officer</label>
+                                <select id="reportOfficerFilter" onchange="renderReportSummary()" class="w-full px-3 py-2 rounded-lg">
+                                    <option value="">All Officers</option>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[#cbd5e1] font-semibold mb-1">Filter by Grant Program</label>
+                                <select id="reportGrantFilter" onchange="renderReportSummary()" class="w-full px-3 py-2 rounded-lg">
+                                    <option value="">All Programs</option>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Date Range Preset Buttons -->
+                        <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                            <span class="text-[11px] text-[#848e9f] mr-1">Quick Presets:</span>
+                            <button type="button" onclick="setReportDatePreset('this_month')" class="date-preset-btn">This Month</button>
+                            <button type="button" onclick="setReportDatePreset('last_30')" class="date-preset-btn">Last 30 Days</button>
+                            <button type="button" onclick="setReportDatePreset('qtd')" class="date-preset-btn active">Quarter to Date</button>
+                            <button type="button" onclick="setReportDatePreset('ytd')" class="date-preset-btn">Year to Date</button>
+                            <button type="button" onclick="setReportDatePreset('all')" class="date-preset-btn">All Time</button>
+                        </div>
+
+                        <!-- Report Exclusion Toggle -->
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-[#272a34]">
+                            <label class="flex items-center gap-2 cursor-pointer text-xs text-[#cbd5e1] font-medium">
+                                <input type="checkbox" id="reportExcludeDeptCalls" checked onchange="renderReportSummary()" class="rounded bg-[#121318] border-[#272a34] text-blue-600 focus:ring-0">
+                                <span class="text-white font-semibold">Exclude Department-Funded Calls</span>
+                                <span class="text-[11px] text-[#848e9f]">(Grant Reimbursement Submission: tracks hours, mileage & traffic metrics only)</span>
+                            </label>
+                            <span class="text-[11px] font-mono text-[#60a5fa]"><i class="fa-solid fa-file-shield mr-1"></i>Official NHTSA/State Audit Format</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Printable Report Sheet Preview -->
+                <div class="card-premium p-6 space-y-6 printable-report-document">
+                    <div class="text-center border-b border-[#272a34] pb-5">
+                        <div class="inline-flex p-2.5 rounded-xl accent-blue-pill mb-2">
+                            <i class="fa-solid fa-shield-halved text-2xl text-blue-400"></i>
+                        </div>
+                        <h2 class="text-base sm:text-lg font-bold text-white tracking-wide">METROPOLITAN POLICE DEPARTMENT</h2>
+                        <h3 class="text-xs uppercase tracking-widest text-[#848e9f] font-semibold mt-0.5">Traffic Safety Grant Enforcement & Activity Reimbursement Report</h3>
+                        <p class="text-[11px] text-[#60a5fa] font-mono mt-0.5">Certified Overtime Hours, Vehicle Patrol Mileage & Traffic Enforcement Violations</p>
+                        <p class="text-xs text-white font-mono mt-1" id="reportPeriodDisplay">Reporting Period: 2026-10-01 to 2026-11-01</p>
+                    </div>
+
+                    <!-- Summary Totals Grid (Hours, Mileage, Stops, Citations, DUIs, Arrests) -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
+                        <div class="bg-[#121318] report-kpi-box p-3 rounded-lg border border-[#272a34]">
+                            <p class="text-[10px] text-[#848e9f] uppercase font-semibold">Grant Hours</p>
+                            <p class="text-lg sm:text-xl font-bold font-mono text-emerald-400 mt-1" id="reportGrantHours">0.0 hrs</p>
+                            <p class="text-[10px] font-mono text-[#cbd5e1] mt-0.5 truncate" id="reportGrantWages">/bin/zsh.00 Claim</p>
+                        </div>
+                        <div class="bg-[#121318] report-kpi-box p-3 rounded-lg border border-[#272a34]">
+                            <p class="text-[10px] text-[#848e9f] uppercase font-semibold">Patrol Mileage</p>
+                            <p class="text-lg sm:text-xl font-bold font-mono text-cyan-400 mt-1" id="reportTotalMileage">0.0 mi</p>
+                            <p class="text-[10px] font-mono text-[#cbd5e1] mt-0.5 truncate" id="reportAvgMiles">0 mi/shift</p>
+                        </div>
+                        <div class="bg-[#121318] report-kpi-box p-3 rounded-lg border border-[#272a34]">
+                            <p class="text-[10px] text-[#848e9f] uppercase font-semibold">Traffic Stops</p>
+                            <p class="text-lg sm:text-xl font-bold font-mono text-white mt-1" id="reportTotalStops">0</p>
+                            <p class="text-[10px] text-[#848e9f] mt-0.5 truncate">Vehicle Contacts</p>
+                        </div>
+                        <div class="bg-[#121318] report-kpi-box p-3 rounded-lg border border-[#272a34]">
+                            <p class="text-[10px] text-[#848e9f] uppercase font-semibold">Total Citations</p>
+                            <p class="text-lg sm:text-xl font-bold font-mono text-white mt-1" id="reportTotalCitations">0</p>
+                            <p class="text-[10px] text-[#848e9f] mt-0.5 truncate">Enforced Violations</p>
+                        </div>
+                        <div class="bg-[#121318] report-kpi-box p-3 rounded-lg border border-[#272a34]">
+                            <p class="text-[10px] text-[#848e9f] uppercase font-semibold">DUI Apprehensions</p>
+                            <p class="text-lg sm:text-xl font-bold font-mono text-amber-400 mt-1" id="reportTotalDuis">0</p>
+                            <p class="text-[10px] text-[#848e9f] mt-0.5 truncate">Alc / Drug Removals</p>
+                        </div>
+                        <div class="bg-[#121318] report-kpi-box p-3 rounded-lg border border-[#272a34]">
+                            <p class="text-[10px] text-[#848e9f] uppercase font-semibold">Felonies & Fugitives</p>
+                            <p class="text-lg sm:text-xl font-bold font-mono text-rose-400 mt-1" id="reportTotalFelonies">0</p>
+                            <p class="text-[10px] text-[#848e9f] mt-0.5 truncate">Tactical Apprehended</p>
+                        </div>
+                    </div>
+
+                    <!-- Comprehensive Traffic Enforcement Summary Deck (All 17 Tracked Metrics) -->
+                    <div class="space-y-2.5 pt-1">
+                        <div class="flex items-center justify-between border-b border-[#272a34] pb-2">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                                <i class="fa-solid fa-chart-column text-[#60a5fa]"></i>
+                                <span>Traffic Safety Enforcement Breakdown (17 Tracked Metrics)</span>
+                            </h4>
+                            <span class="text-[11px] text-[#848e9f]">Cumulative Period Totals</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
+                            <!-- 1. Stops -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Total Stops</span>
+                                <span class="text-base font-bold font-mono text-white" id="repStatStops">0</span>
+                            </div>
+                            <!-- 2. Speeding -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Speeding</span>
+                                <span class="text-base font-bold font-mono text-emerald-400" id="repStatSpeeding">0</span>
+                            </div>
+                            <!-- 3. Seat Belt -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Seat Belt</span>
+                                <span class="text-base font-bold font-mono text-blue-400" id="repStatSeatBelt">0</span>
+                            </div>
+                            <!-- 4. Child Restraint -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Child Restraint</span>
+                                <span class="text-base font-bold font-mono text-blue-400" id="repStatChildBelt">0</span>
+                            </div>
+                            <!-- 5. DUI Alcohol -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">DUI Alcohol</span>
+                                <span class="text-base font-bold font-mono text-amber-400" id="repStatDuiAlc">0</span>
+                            </div>
+                            <!-- 6. DUI Drugs -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">DUI Drugs</span>
+                                <span class="text-base font-bold font-mono text-amber-400" id="repStatDuiDrug">0</span>
+                            </div>
+                            <!-- 7. DUI Both -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">DUI Both</span>
+                                <span class="text-base font-bold font-mono text-amber-400" id="repStatDuiBoth">0</span>
+                            </div>
+                            <!-- 8. Underage Alcohol -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Underage Alc</span>
+                                <span class="text-base font-bold font-mono text-amber-400" id="repStatUnderageAlc">0</span>
+                            </div>
+                            <!-- 9. Reckless Driving -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Reckless Drive</span>
+                                <span class="text-base font-bold font-mono text-rose-400" id="repStatReckless">0</span>
+                            </div>
+                            <!-- 10. Texting -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Texting / Distr</span>
+                                <span class="text-base font-bold font-mono text-indigo-400" id="repStatTexting">0</span>
+                            </div>
+                            <!-- 11. Suspended License -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Susp License</span>
+                                <span class="text-base font-bold font-mono text-cyan-400" id="repStatSuspended">0</span>
+                            </div>
+                            <!-- 12. No Insurance -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">No Insurance</span>
+                                <span class="text-base font-bold font-mono text-cyan-400" id="repStatNoInsurance">0</span>
+                            </div>
+                            <!-- 13. Motorcycle Endorsement -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Moto Endorse</span>
+                                <span class="text-base font-bold font-mono text-sky-400" id="repStatMotorcycle">0</span>
+                            </div>
+                            <!-- 14. Bike / Pedestrian -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Bike / Ped</span>
+                                <span class="text-base font-bold font-mono text-teal-400" id="repStatBikePed">0</span>
+                            </div>
+                            <!-- 15. Felony Arrests -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Felony Arrests</span>
+                                <span class="text-base font-bold font-mono text-rose-500" id="repStatFelony">0</span>
+                            </div>
+                            <!-- 16. Stolen Vehicles -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Stolen Autos</span>
+                                <span class="text-base font-bold font-mono text-purple-400" id="repStatStolenVeh">0</span>
+                            </div>
+                            <!-- 17. Fugitives Apprehended -->
+                            <div class="bg-[#121318] report-kpi-box p-2 rounded-lg border border-[#272a34]">
+                                <span class="text-[9px] text-[#848e9f] uppercase block font-semibold truncate">Fugitives Appr</span>
+                                <span class="text-base font-bold font-mono text-rose-400" id="repStatFugitives">0</span>
+                            </div>
+                            <!-- Summary Total Actions -->
+                            <div class="bg-[#161a22] report-kpi-box p-2 rounded-lg border border-[#2b3346]">
+                                <span class="text-[9px] text-blue-400 uppercase block font-bold truncate">Total Actions</span>
+                                <span class="text-base font-bold font-mono text-white" id="repStatTotalActions">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Itemized Shift Enforcement Table (Hours, Mileage, Wages, All Metrics) -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                                <i class="fa-solid fa-list-check text-[#60a5fa]"></i>
+                                <span>Itemized Grant Shifts, Hours, Mileage & Enforcement Activity</span>
+                            </h4>
+                            <span class="text-[11px] font-mono text-[#848e9f]" id="reportShiftCount">0 shifts</span>
+                        </div>
+                        <div class="overflow-x-auto border border-[#272a34] rounded-lg">
+                            <table class="w-full text-left text-xs premium-table">
+                                <thead id="reportShiftsTableHead">
+                                    <tr>
+                                        <th class="px-3 py-2">Shift Date</th>
+                                        <th class="px-3 py-2">Officer</th>
+                                        <th class="px-3 py-2">Shift Hours</th>
+                                        <th class="px-3 py-2">Odometer & Miles</th>
+                                        <th class="px-3 py-2">Hourly Pay & Claim</th>
+                                        <th class="px-3 py-2">Traffic Violations & Enforcement Activity</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportShiftsTableBody" class="divide-y divide-[#272a34]/60">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Itemized Department Billed Audit Table (Omitted when Exclude Dept Calls is checked) -->
+                    <div id="departmentCallsAuditSection" class="space-y-2 print-hide hidden">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-handshake-angle"></i>
+                            <span>Department-Funded Calls Log (Internal Municipal Audit Deduction)</span>
+                        </h4>
+                        <div class="overflow-x-auto border border-[#272a34] rounded-lg">
+                            <table class="w-full text-left text-xs premium-table">
+                                <thead>
+                                    <tr>
+                                        <th class="px-4 py-2">Shift Date</th>
+                                        <th class="px-4 py-2">Officer</th>
+                                        <th class="px-4 py-2">Activity Type</th>
+                                        <th class="px-4 py-2">Case / CAD Number</th>
+                                        <th class="px-4 py-2">Time Deducted</th>
+                                        <th class="px-4 py-2">Call Narrative</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportCallsTableBody" class="divide-y divide-[#272a34]/60">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Sign-off Certification Block -->
+                    <div class="pt-6 border-t border-[#272a34] grid grid-cols-1 sm:grid-cols-2 gap-8 text-xs text-[#848e9f]">
+                        <div class="space-y-4">
+                            <p>I certify under penalty of perjury that this report accurately reflects hours worked, vehicle patrol mileage, and traffic safety enforcement actions conducted under the designated traffic grant program. All non-grant department operational calls have been segregated and excluded from this grant reimbursement claim.</p>
+                            <div class="border-b border-[#272a34] w-3/4 pt-8"></div>
+                            <p class="text-[11px]">Traffic Program Coordinator Signature / Date</p>
+                        </div>
+                        <div class="space-y-4">
+                            <p>I confirm that the officer wage rates reflect certified municipal overtime payroll schedules and that the documented mileage and citation records correspond to certified police department CAD and RMS logs.</p>
+                            <div class="border-b border-[#272a34] w-3/4 pt-8"></div>
+                            <p class="text-[11px]">Division Commander Signature / Date</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ============================================================
+         FULL-SCREEN SHIFT STAT TRACKER PAGE (POPS UP ON "LOG NEW SHIFT")
+         ============================================================ -->
+    <div id="statTrackerPage" class="fixed inset-0 z-50 hidden flex-col bg-[#101114] text-[#cbd5e1] overflow-y-auto">
+        
+        <!-- Sticky Tracker Header -->
+        <header class="bg-[#16171e] border-b border-[#272a34] sticky top-0 z-30 shadow-2xl backdrop-blur-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                
+                <div class="flex items-center space-x-3 sm:space-x-4">
+                    <button onclick="closeStatTracker()" class="p-2 rounded-lg bg-[#121318] hover:bg-[#20232b] text-[#848e9f] hover:text-white border border-[#272a34] transition flex items-center space-x-1.5 text-xs font-medium">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span class="hidden sm:inline">Exit Tracker</span>
+                    </button>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Shift Stat Tracker</h2>
+                            <span class="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <span>LIVE TRACKING</span>
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-[#848e9f]">Grant Traffic Enforcement & Department Call Time Tracking</p>
+                    </div>
+                </div>
+
+                <!-- Tracker Actions Top -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <button onclick="resetTrackerCounters()" class="px-3 py-1.5 rounded-lg text-xs font-medium text-[#848e9f] hover:text-white bg-[#121318] border border-[#272a34] hover:bg-[#20232b] transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="hidden sm:inline">Reset</span>
+                    </button>
+                    <button onclick="submitStatTracker()" class="accent-blue-button px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center space-x-2 shadow-lg">
+                        <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+                        <span>Save & Submit Shift</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Tracker Content -->
+        <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+            <!-- ========================================================
+                 SECTION 1: BASIC INFORMATION (REQUIRED AT TOP)
+                 - Date
+                 - Time started
+                 - Time ended
+                 - Starting Mileage
+                 - Ending Mileage
+                 - Hours Worked
+                 - Total hours worked
+                 ======================================================== -->
+            <div class="card-premium p-5 sm:p-6 space-y-5 border-t-4 border-blue-600">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#272a34] pb-4">
+                    <div class="flex items-center space-x-2.5">
+                        <span class="accent-blue-icon-box p-2 rounded-lg text-sm">
+                            <i class="fa-solid fa-id-card-clip"></i>
+                        </span>
+                        <div>
+                            <h3 class="text-sm font-semibold text-white">Shift Basic Information</h3>
+                            <p class="text-xs text-[#848e9f]">Required detail for officer shift validation & grant funding compliance</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Live Calculations Indicators -->
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                        <div class="accent-blue-pill px-3 py-1 rounded-lg flex items-center space-x-1.5">
+                            <i class="fa-solid fa-road text-xs"></i>
+                            <span>Patrol: <strong id="calcPatrolMiles" class="text-white font-mono">0.0 mi</strong></span>
+                        </div>
+                        <div class="accent-blue-pill px-3 py-1 rounded-lg flex items-center space-x-1.5">
+                            <i class="fa-solid fa-clock text-xs"></i>
+                            <span>Shift Duration: <strong id="calcShiftDuration" class="text-white font-mono">0.0 hrs</strong></span>
+                        </div>
+                        <div class="accent-amber-pill px-3 py-1 rounded-lg flex items-center space-x-1.5">
+                            <i class="fa-solid fa-handshake-angle text-xs"></i>
+                            <span>Dept Billed: <strong id="calcDeptBilledHours" class="text-amber-300 font-mono">0.0 hrs</strong></span>
+                        </div>
+                        <div class="p-1 px-3 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center space-x-1.5">
+                            <i class="fa-solid fa-shield-halved text-xs"></i>
+                            <span>Net Grant: <strong id="calcNetGrantHours" class="text-emerald-200 font-mono">0.0 hrs</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Fields Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                    
+                    <!-- 1. Date -->
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1 flex items-center justify-between">
+                            <span>Date <span class="text-rose-400">*</span></span>
+                            <span class="text-[10px] text-[#848e9f]">Shift Date</span>
+                        </label>
+                        <input type="date" id="trackerDate" required class="w-full px-3 py-2.5 rounded-lg text-xs font-mono font-medium">
+                    </div>
+
+                    <!-- 2. Time Started -->
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1 flex items-center justify-between">
+                            <span>Time Started <span class="text-rose-400">*</span></span>
+                            <span class="text-[10px] text-[#848e9f]">24h / CAD</span>
+                        </label>
+                        <input type="time" id="trackerTimeStart" oninput="calculateShiftMetrics()" required class="w-full px-3 py-2.5 rounded-lg text-xs font-mono">
+                    </div>
+
+                    <!-- 3. Time Ended -->
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1 flex items-center justify-between">
+                            <span>Time Ended <span class="text-rose-400">*</span></span>
+                            <span class="text-[10px] text-[#848e9f]">24h / CAD</span>
+                        </label>
+                        <input type="time" id="trackerTimeEnd" oninput="calculateShiftMetrics()" required class="w-full px-3 py-2.5 rounded-lg text-xs font-mono">
+                    </div>
+
+                    <!-- Officer Profile Selector -->
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1 flex items-center justify-between">
+                            <span>Officer & Badge # <span class="text-rose-400">*</span></span>
+                            <span class="text-[10px] text-emerald-400">Includes Wage</span>
+                        </label>
+                        <select id="trackerOfficer" required class="w-full px-3 py-2.5 rounded-lg text-xs">
+                            <!-- Populated dynamically from officers -->
+                        </select>
+                    </div>
+
+                    <!-- 4. Starting Mileage -->
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1 flex items-center justify-between">
+                            <span>Starting Mileage <span class="text-rose-400">*</span></span>
+                            <span class="text-[10px] text-[#848e9f]">Odometer Start</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="trackerStartMileage" step="0.1" min="0" oninput="calculateShiftMetrics()" placeholder="e.g. 45210.0" class="w-full px-3 py-2.5 pr-10 rounded-lg text-xs font-mono">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#848e9f] font-mono">mi</span>
+                        </div>
+                    </div>
+
+                    <!-- 5. Ending Mileage -->
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1 flex items-center justify-between">
+                            <span>Ending Mileage <span class="text-rose-400">*</span></span>
+                            <span class="text-[10px] text-[#848e9f]">Odometer End</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="trackerEndMileage" step="0.1" min="0" oninput="calculateShiftMetrics()" placeholder="e.g. 45288.4" class="w-full px-3 py-2.5 pr-10 rounded-lg text-xs font-mono">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#848e9f] font-mono">mi</span>
+                        </div>
+                    </div>
+
+                    <!-- 6. Hours Worked -->
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1 flex items-center justify-between">
+                            <span>Hours Worked <span class="text-rose-400">*</span></span>
+                            <span class="text-[10px] text-emerald-400">Shift Elapsed</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="trackerHoursWorked" step="0.1" min="0.5" max="24" required placeholder="8.0" class="w-full px-3 py-2.5 pr-10 rounded-lg text-xs font-mono font-bold text-white bg-[#1a1c22]">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#848e9f] font-mono">hrs</span>
+                        </div>
+                    </div>
+
+                    <!-- 7. Total Hours Worked -->
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1 flex items-center justify-between">
+                            <span>Total Hours Worked <span class="text-rose-400">*</span></span>
+                            <span class="text-[10px] text-[#848e9f]">Gross Shift Total</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="trackerTotalHours" step="0.1" min="0.5" max="24" required placeholder="8.0" class="w-full px-3 py-2.5 pr-10 rounded-lg text-xs font-mono font-bold text-white bg-[#1a1c22]">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#848e9f] font-mono">hrs</span>
+                        </div>
+                    </div>
+
+                    <!-- Grant Program Selector -->
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Grant / Funding Program</label>
+                        <select id="trackerShiftType" class="w-full px-3 py-2.5 rounded-lg text-xs">
+                            <!-- Populated dynamically from grants -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Patrol Vehicle / Unit #</label>
+                        <input type="text" id="trackerUnit" placeholder="e.g. Unit #42 (Interceptor)" class="w-full px-3 py-2.5 rounded-lg text-xs">
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Assigned Target Corridor / Area</label>
+                        <input type="text" id="trackerLocation" placeholder="e.g. State Route 104 Corridor & Main St Intersection" class="w-full px-3 py-2.5 rounded-lg text-xs">
+                    </div>
+
+                </div>
+            </div>
+
+
+            <!-- ========================================================
+                 SECTION 2: LIVE SHIFT SUMMARY BANNER
+                 ======================================================== -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                <div class="card-premium p-3 text-center">
+                    <span class="text-[10px] text-[#848e9f] uppercase font-semibold">Total Stops</span>
+                    <p class="text-2xl font-bold font-mono text-white mt-1" id="liveSummaryStops">0</p>
+                </div>
+                <div class="card-premium p-3 text-center">
+                    <span class="text-[10px] text-[#848e9f] uppercase font-semibold">Total Citations</span>
+                    <p class="text-2xl font-bold font-mono text-[#60a5fa] mt-1" id="liveSummaryCitations">0</p>
+                </div>
+                <div class="card-premium p-3 text-center">
+                    <span class="text-[10px] text-[#848e9f] uppercase font-semibold">Total DUIs</span>
+                    <p class="text-2xl font-bold font-mono text-rose-400 mt-1" id="liveSummaryDuis">0</p>
+                </div>
+                <div class="card-premium p-3 text-center">
+                    <span class="text-[10px] text-[#848e9f] uppercase font-semibold">Felony & Fugitives</span>
+                    <p class="text-2xl font-bold font-mono text-white mt-1" id="liveSummaryFelonies">0</p>
+                </div>
+                <div class="card-premium p-3 text-center">
+                    <span class="text-[10px] text-[#848e9f] uppercase font-semibold">Dept Billed (Calls)</span>
+                    <p class="text-2xl font-bold font-mono text-amber-400 mt-1" id="liveSummaryDeptHours">0.0h</p>
+                </div>
+                <div class="card-premium p-3 text-center">
+                    <span class="text-[10px] text-[#848e9f] uppercase font-semibold">Net Grant Hours</span>
+                    <p class="text-2xl font-bold font-mono text-emerald-400 mt-1" id="liveSummaryGrantHours">0.0h</p>
+                </div>
+            </div>
+
+
+            <!-- ========================================================
+                 SECTION 3: EXACT STAT COUNTER DECK (17 TRACKED METRICS)
+                 ======================================================== -->
+            <div class="space-y-5">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-gamepad text-[#60a5fa]"></i>
+                            <span>Traffic Enforcement Stat Counters</span>
+                        </h3>
+                        <p class="text-xs text-[#848e9f]">Official metrics for NHTSA grant performance & traffic safety reporting</p>
+                    </div>
+                </div>
+
+                <!-- 1. FEATURED PRIMARY COUNTER: TOTAL STOPS -->
+                <div class="card-premium p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-blue-500">
+                    <div class="flex items-center space-x-3.5">
+                        <div class="accent-blue-icon-box w-12 h-12 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-car-side"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-mono tracking-wider font-semibold text-[#60a5fa]">Primary Metric</span>
+                            <h4 class="text-base font-bold text-white">Total Traffic Stops</h4>
+                            <p class="text-xs text-[#848e9f]">Total motor vehicle enforcement stops initiated during shift</p>
+                        </div>
+                    </div>
+
+                    <!-- Large Controls for Stops -->
+                    <div class="flex items-center space-x-3 self-end sm:self-center">
+                        <button type="button" onclick="changeCounter('stops', -1)" class="stat-btn stat-btn-minus text-base" title="Minus 1 Stop">
+                            <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <span id="counter_stops" class="text-3xl sm:text-4xl font-mono font-bold text-white w-16 text-center">0</span>
+                        <button type="button" onclick="changeCounter('stops', 1)" class="stat-btn stat-btn-plus text-base" title="Plus 1 Stop">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <button type="button" onclick="changeCounter('stops', 5)" class="px-2.5 py-2 rounded-lg text-xs font-mono font-bold bg-[#1e2433] hover:bg-[#283247] text-[#93c5fd] border border-blue-500/30 transition" title="Add 5 Stops">
+                            +5
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5 STRATEGIC CATEGORY GRIDS -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    
+                    <!-- CATEGORY 1: IMPAIRED DRIVING (DUI) & UNDERAGE -->
+                    <div class="card-premium p-4 space-y-3 border-t-2 border-rose-500/60">
+                        <div class="flex items-center justify-between border-b border-[#272a34] pb-2.5">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-wine-glass-triangle"></i> Impaired Driving & Alcohol
+                            </h4>
+                            <span class="text-xs font-mono text-rose-400 font-bold" id="groupTotalDuis">0 DUIs</span>
+                        </div>
+
+                        <!-- 2. DUI Alcohol -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-rose-300">DUI Alcohol</h5>
+                                <span class="text-[10px] text-[#848e9f]">BAC .08+ or Impaired</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('dui_alcohol', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_dui_alcohol" class="font-mono text-base font-bold text-rose-400 w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('dui_alcohol', 1)" class="stat-btn bg-rose-600 hover:bg-rose-500 text-white"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- 3. DUI Drugs -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-rose-300">DUI Drugs</h5>
+                                <span class="text-[10px] text-[#848e9f]">Narcotics / DRE evaluation</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('dui_drugs', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_dui_drugs" class="font-mono text-base font-bold text-rose-400 w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('dui_drugs', 1)" class="stat-btn bg-rose-600 hover:bg-rose-500 text-white"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- 4. DUI Both -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-rose-300">DUI Both (Alcohol & Drugs)</h5>
+                                <span class="text-[10px] text-[#848e9f]">Polysubstance impairment</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('dui_both', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_dui_both" class="font-mono text-base font-bold text-rose-400 w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('dui_both', 1)" class="stat-btn bg-rose-600 hover:bg-rose-500 text-white"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- 5. Underage Alcohol Violations -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-white">Underage Alcohol Violations</h5>
+                                <span class="text-[10px] text-[#848e9f]">Minor in possession / Zero Tol.</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('underage_alcohol', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_underage_alcohol" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('underage_alcohol', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- CATEGORY 2: OCCUPANT RESTRAINT & SEAT BELTS -->
+                    <div class="card-premium p-4 space-y-3 border-t-2 border-blue-500/60">
+                        <div class="flex items-center justify-between border-b border-[#272a34] pb-2.5">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-[#60a5fa] flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-check"></i> Occupant Protection
+                            </h4>
+                            <span class="text-xs font-mono text-[#60a5fa] font-bold" id="groupTotalBelts">0 citations</span>
+                        </div>
+
+                        <!-- 6. Seat Belt Citations -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-white">Seat Belt Citations</h5>
+                                <span class="text-[10px] text-[#848e9f]">Adult driver / passenger</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('seat_belt', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_seat_belt" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('seat_belt', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- 7. Child Seat Belt Citations -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-white">Child Seat Belt Citations</h5>
+                                <span class="text-[10px] text-[#848e9f]">Car seat / booster violation</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('child_seat_belt', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_child_seat_belt" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('child_seat_belt', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-[#121318] rounded-xl border border-[#272a34] text-xs space-y-1 mt-6">
+                            <span class="text-[11px] font-semibold text-white block">Click-It-Or-Ticket Directive:</span>
+                            <p class="text-[11px] text-[#848e9f] leading-relaxed">
+                                Child restraint violations carry state priority and must be fully logged on grant shift logs.
+                            </p>
+                        </div>
+                    </div>
+
+
+                    <!-- CATEGORY 3: SPEEDING & HAZARDOUS MOVING -->
+                    <div class="card-premium p-4 space-y-3 border-t-2 border-cyan-500/60">
+                        <div class="flex items-center justify-between border-b border-[#272a34] pb-2.5">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-gauge-high"></i> Speed & Moving Violations
+                            </h4>
+                            <span class="text-xs font-mono text-cyan-400 font-bold" id="groupTotalMoving">0 citations</span>
+                        </div>
+
+                        <!-- 8. Speeding -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-white">Speeding Citations</h5>
+                                <span class="text-[10px] text-[#848e9f]">Radar / Lidar / Corridor</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('speeding', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_speeding" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('speeding', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- 9. Reckless Driving -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-white">Reckless Driving</h5>
+                                <span class="text-[10px] text-[#848e9f]">Willful wanton disregard</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('reckless_driving', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_reckless_driving" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('reckless_driving', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- 10. Texting / Distracted -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-white">Texting / Handheld Device</h5>
+                                <span class="text-[10px] text-[#848e9f]">Distracted driving violation</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('texting', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_texting" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('texting', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- 11. Bicycle & Pedestrian Citations -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-white">Bicycle / Pedestrian Citations</h5>
+                                <span class="text-[10px] text-[#848e9f]">Crosswalk & bicycle safety</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('bike_ped', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_bike_ped" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('bike_ped', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- CATEGORY 4: DRIVER LICENSE & INSURANCE -->
+                    <div class="card-premium p-4 space-y-3 border-t-2 border-indigo-500/60">
+                        <div class="flex items-center justify-between border-b border-[#272a34] pb-2.5">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-id-card"></i> License & Insurance
+                            </h4>
+                            <span class="text-xs font-mono text-indigo-400 font-bold" id="groupTotalLicense">0 citations</span>
+                        </div>
+
+                        <!-- 12. No Insurance -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-white">No Insurance</h5>
+                                <span class="text-[10px] text-[#848e9f]">Uninsured motor vehicle</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('no_insurance', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_no_insurance" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('no_insurance', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- 13. Suspended License -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-white">Suspended / Revoked License</h5>
+                                <span class="text-[10px] text-[#848e9f]">DWS / DWR violation</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('suspended_license', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_suspended_license" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('suspended_license', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- 14. Motorcycle Endorsement -->
+                        <div class="stat-counter-card flex items-center justify-between">
+                            <div>
+                                <h5 class="text-xs font-semibold text-white">Motorcycle Endorsement</h5>
+                                <span class="text-[10px] text-[#848e9f]">Operating without endorsement</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="changeCounter('motorcycle_endorsement', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span id="counter_motorcycle_endorsement" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                <button type="button" onclick="changeCounter('motorcycle_endorsement', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- CATEGORY 5: FELONIES, STOLEN VEHICLES & FUGITIVES -->
+                    <div class="card-premium p-4 space-y-3 border-t-2 border-emerald-500/60 md:col-span-2 lg:col-span-2">
+                        <div class="flex items-center justify-between border-b border-[#272a34] pb-2.5">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-shield-halved"></i> Felonies, Recoveries & Apprehensions
+                            </h4>
+                            <span class="text-xs font-mono text-emerald-400 font-bold" id="groupTotalFelonies">0 recorded</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <!-- 15. Felony Arrest -->
+                            <div class="stat-counter-card flex items-center justify-between">
+                                <div>
+                                    <h5 class="text-xs font-semibold text-white">Felony Arrests</h5>
+                                    <span class="text-[10px] text-[#848e9f]">Drugs / Weapons / Other</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button type="button" onclick="changeCounter('felony_arrest', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                    <span id="counter_felony_arrest" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                    <button type="button" onclick="changeCounter('felony_arrest', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- 16. Recovered Stolen Vehicles -->
+                            <div class="stat-counter-card flex items-center justify-between">
+                                <div>
+                                    <h5 class="text-xs font-semibold text-white">Stolen Vehicles Recovered</h5>
+                                    <span class="text-[10px] text-[#848e9f]">NCIC / State Hot Sheet</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button type="button" onclick="changeCounter('stolen_vehicles', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                    <span id="counter_stolen_vehicles" class="font-mono text-base font-bold text-emerald-400 w-8 text-center">0</span>
+                                    <button type="button" onclick="changeCounter('stolen_vehicles', 1)" class="stat-btn bg-emerald-600 hover:bg-emerald-500 text-white"><i class="fa-solid fa-plus text-xs"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- 17. Fugitives Apprehended -->
+                            <div class="stat-counter-card flex items-center justify-between">
+                                <div>
+                                    <h5 class="text-xs font-semibold text-white">Fugitives Apprehended</h5>
+                                    <span class="text-[10px] text-[#848e9f]">Active Felony/Extradition Warrant</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button type="button" onclick="changeCounter('fugitives', -1)" class="stat-btn stat-btn-minus"><i class="fa-solid fa-minus text-xs"></i></button>
+                                    <span id="counter_fugitives" class="font-mono text-base font-bold text-white w-8 text-center">0</span>
+                                    <button type="button" onclick="changeCounter('fugitives', 1)" class="stat-btn stat-btn-plus"><i class="fa-solid fa-plus text-xs"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+            <!-- ========================================================
+                 SECTION 4: OFFICER ASSISTS & CALLS FOR SERVICE (DEPARTMENT BILLED)
+                 - Positioned below the stat counter deck as requested
+                 - When adding: required Case Number and Time Spent
+                 - Billed to Department, NOT taken from grant budget!
+                 ======================================================== -->
+            <div class="card-premium p-5 sm:p-6 space-y-4 border-l-4 border-amber-500 bg-[#191b22]">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#272a34] pb-3.5">
+                    <div class="flex items-center space-x-2.5">
+                        <span class="accent-amber-pill p-2 rounded-lg text-sm">
+                            <i class="fa-solid fa-handshake-angle"></i>
+                        </span>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <h3 class="text-sm font-bold text-white">Non-Grant Activity: Officer Assists & Calls for Service</h3>
+                                <span class="accent-amber-pill px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold">Department Billed</span>
+                            </div>
+                            <p class="text-xs text-[#848e9f] mt-0.5">
+                                Time spent assisting officers or taking general calls is billed to the department and <strong class="text-amber-300">not taken from the grant budget</strong>.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="text-right">
+                        <span class="text-xs text-[#848e9f]">Department Billed Time:</span>
+                        <p class="text-lg font-bold font-mono text-amber-400" id="trackerDeptTimeDisplay">0.0 hrs (0 mins)</p>
+                    </div>
+                </div>
+
+                <!-- Add Call / Assist Input Bar -->
+                <div class="bg-[#121318] p-4 rounded-xl border border-[#272a34] space-y-3">
+                    <div class="text-xs font-semibold text-white flex items-center justify-between">
+                        <span><i class="fa-solid fa-plus-circle text-amber-400 mr-1.5"></i> Log Assist or Dispatched Call</span>
+                        <span class="text-[11px] text-[#848e9f] font-normal">Case # & Time are mandatory</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+                        <!-- Activity Type -->
+                        <div>
+                            <label class="block text-[#cbd5e1] font-medium mb-1">Activity Type <span class="text-rose-400">*</span></label>
+                            <select id="callEntryType" class="w-full px-3 py-2 rounded-lg text-xs">
+                                <option value="Assisted an Officer">Assisted an Officer</option>
+                                <option value="Took a Call (Service)">Took a Call (Dispatched)</option>
+                            </select>
+                        </div>
+
+                        <!-- Case Number (REQUIRED) -->
+                        <div>
+                            <label class="block text-[#cbd5e1] font-medium mb-1">Case / CAD Number <span class="text-rose-400">*</span></label>
+                            <input type="text" id="callEntryCaseNumber" required placeholder="e.g. 26-10492 or CAD-883" class="w-full px-3 py-2 rounded-lg text-xs font-mono font-medium">
+                        </div>
+
+                        <!-- Time Spent on Call (REQUIRED) -->
+                        <div>
+                            <label class="block text-[#cbd5e1] font-medium mb-1">Time Spent (Minutes) <span class="text-rose-400">*</span></label>
+                            <div class="relative">
+                                <input type="number" id="callEntryMinutes" min="1" max="720" required placeholder="e.g. 45" class="w-full px-3 py-2 pr-12 rounded-lg text-xs font-mono font-bold text-amber-300">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#848e9f] font-mono">mins</span>
+                            </div>
+                        </div>
+
+                        <!-- Call Narrative / Notes -->
+                        <div>
+                            <label class="block text-[#cbd5e1] font-medium mb-1">Call Details / Unit Backed</label>
+                            <input type="text" id="callEntryNotes" placeholder="e.g. Backed 4B12 on felony stop" class="w-full px-3 py-2 rounded-lg text-xs">
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="flex items-end">
+                            <button type="button" onclick="addNonGrantCallRecord()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center space-x-1.5 transition shadow">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                                <span>Add to Shift</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Minutes Buttons -->
+                    <div class="flex items-center space-x-2 pt-1 text-[11px] text-[#848e9f]">
+                        <span>Quick Set Time:</span>
+                        <button type="button" onclick="setCallMinutes(15)" class="px-2 py-0.5 rounded bg-[#1c1e25] hover:bg-[#252832] text-[#cbd5e1] border border-[#272a34] font-mono text-[10px]">15m</button>
+                        <button type="button" onclick="setCallMinutes(30)" class="px-2 py-0.5 rounded bg-[#1c1e25] hover:bg-[#252832] text-[#cbd5e1] border border-[#272a34] font-mono text-[10px]">30m</button>
+                        <button type="button" onclick="setCallMinutes(45)" class="px-2 py-0.5 rounded bg-[#1c1e25] hover:bg-[#252832] text-[#cbd5e1] border border-[#272a34] font-mono text-[10px]">45m</button>
+                        <button type="button" onclick="setCallMinutes(60)" class="px-2 py-0.5 rounded bg-[#1c1e25] hover:bg-[#252832] text-[#cbd5e1] border border-[#272a34] font-mono text-[10px]">60m (1h)</button>
+                        <button type="button" onclick="setCallMinutes(90)" class="px-2 py-0.5 rounded bg-[#1c1e25] hover:bg-[#252832] text-[#cbd5e1] border border-[#272a34] font-mono text-[10px]">90m (1.5h)</button>
+                    </div>
+                </div>
+
+                <!-- Table of Logged Calls & Assists in this Shift -->
+                <div class="overflow-x-auto border border-[#272a34] rounded-lg">
+                    <table class="w-full text-left text-xs premium-table">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-2.5">Activity</th>
+                                <th class="px-4 py-2.5">Case / CAD Number</th>
+                                <th class="px-4 py-2.5">Time Spent</th>
+                                <th class="px-4 py-2.5">Billing Status</th>
+                                <th class="px-4 py-2.5">Details</th>
+                                <th class="px-4 py-2.5 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trackerCallsTableBody" class="divide-y divide-[#272a34]/60">
+                            <tr>
+                                <td colspan="6" class="px-4 py-4 text-center text-[#848e9f]">
+                                    No non-grant calls or officer assists recorded for this shift. (100% of shift hours currently allocated to grant).
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+
+            <!-- ========================================================
+                 BOTTOM SUBMISSION BAR
+                 ======================================================== -->
+            <div class="card-premium p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="text-xs text-[#848e9f]">
+                    <span class="font-semibold text-white block">Ready to complete shift?</span>
+                    Saving will record all 17 enforcement stats and segregate department call hours into grant accounting logs.
+                </div>
+                <div class="flex items-center space-x-3 self-end sm:self-auto">
+                    <button type="button" onclick="closeStatTracker()" class="px-4 py-2 rounded-lg text-xs font-medium text-[#848e9f] hover:text-white bg-[#1c1e25] border border-[#272a34] hover:bg-[#22252e] transition">
+                        Cancel & Close
+                    </button>
+                    <button type="button" onclick="submitStatTracker()" class="accent-blue-button px-6 py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center space-x-2 shadow-xl">
+                        <i class="fa-solid fa-check text-sm"></i>
+                        <span>Save & Submit Shift</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ============================================================
+         ADD / EDIT OFFICER MODAL
+         ============================================================ -->
+    <div id="officerModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+        <div class="card-premium w-full max-w-md p-6 space-y-4 bg-[#17181e] border border-[#272a34] shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-[#272a34] pb-3">
+                <div class="flex items-center space-x-2.5">
+                    <span class="accent-emerald-pill p-2 rounded-lg text-sm">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </span>
+                    <h3 class="text-sm font-bold text-white" id="officerModalTitle">Add Officer Profile</h3>
+                </div>
+                <button onclick="closeModal('officerModal')" class="text-[#848e9f] hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <form id="officerForm" onsubmit="handleOfficerSubmit(event)" class="space-y-3.5 text-xs">
+                <input type="hidden" id="officerId">
+                <div>
+                    <label class="block text-[#cbd5e1] font-semibold mb-1">Officer Last Name <span class="text-rose-400">*</span></label>
+                    <input type="text" id="officerNameInput" required placeholder="e.g. Miller" class="w-full px-3 py-2 rounded-lg">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Badge # <span class="text-rose-400">*</span></label>
+                        <input type="text" id="officerBadgeInput" required placeholder="e.g. #412" class="w-full px-3 py-2 rounded-lg font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Rank / Title</label>
+                        <select id="officerRankInput" class="w-full px-3 py-2 rounded-lg">
+                            <option value="Officer">Officer</option>
+                            <option value="Corporal">Corporal</option>
+                            <option value="Sergeant">Sergeant</option>
+                            <option value="Lieutenant">Lieutenant</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[#cbd5e1] font-semibold mb-1 flex items-center justify-between">
+                        <span>Hourly Overtime / Wage Rate <span class="text-rose-400">*</span></span>
+                        <span class="text-[10px] text-emerald-400">Budgeting Rate</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#848e9f] font-mono">$</span>
+                        <input type="number" id="officerRateInput" step="0.25" min="1" required placeholder="68.50" class="w-full pl-7 pr-12 py-2 rounded-lg font-mono font-bold text-emerald-400">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#848e9f] font-mono">/hr</span>
+                    </div>
+                    <p class="text-[10px] text-[#848e9f] mt-1">This rate is used to calculate exact grant reimbursement spend.</p>
+                </div>
+
+                <div class="pt-3 border-t border-[#272a34] flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('officerModal')" class="px-4 py-2 rounded-lg text-xs font-medium text-[#848e9f] hover:text-white bg-[#1c1e25] border border-[#272a34]">
+                        Cancel
+                    </button>
+                    <button type="submit" class="accent-blue-button px-5 py-2 rounded-lg text-xs font-semibold">
+                        Save Officer Profile
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ============================================================
+         QUICK EDIT HOURLY PAY RATE MODAL (FOCUSED ON HOURLY PAY EDIT)
+         ============================================================ -->
+    <div id="editHourlyRateModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+        <div class="card-premium w-full max-w-sm p-6 space-y-4 bg-[#17181e] border border-emerald-500/40 shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-[#272a34] pb-3">
+                <div class="flex items-center space-x-2.5">
+                    <span class="accent-emerald-pill p-2 rounded-lg text-sm">
+                        <i class="fa-solid fa-dollar-sign"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Edit Hourly Wage</h3>
+                        <p class="text-[11px] text-[#848e9f]" id="quickEditOfficerName">Ofc. Miller</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('editHourlyRateModal')" class="text-[#848e9f] hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <form id="quickRateForm" onsubmit="handleQuickRateSubmit(event)" class="space-y-3.5 text-xs">
+                <input type="hidden" id="quickRateOfficerId">
+                <div>
+                    <label class="block text-[#cbd5e1] font-semibold mb-1">Hourly Pay Rate (Budgeting)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#848e9f] font-mono">$</span>
+                        <input type="number" id="quickRateValue" step="0.25" min="1" required class="w-full pl-7 pr-12 py-2.5 rounded-lg font-mono text-base font-bold text-emerald-400">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#848e9f] font-mono">/hr</span>
+                    </div>
+                    <p class="text-[10px] text-[#848e9f] mt-1.5 leading-relaxed">
+                        Updating this rate will recalculate future and historical budget projections for this officer.
+                    </p>
+                </div>
+
+                <div class="pt-3 border-t border-[#272a34] flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('editHourlyRateModal')" class="px-4 py-2 rounded-lg text-xs font-medium text-[#848e9f] hover:text-white bg-[#1c1e25] border border-[#272a34]">
+                        Cancel
+                    </button>
+                    <button type="submit" class="accent-blue-button px-5 py-2 rounded-lg text-xs font-semibold">
+                        Update Hourly Pay
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ============================================================
+         ADD / EDIT GRANT MODAL
+         ============================================================ -->
+    <div id="grantModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+        <div class="card-premium w-full max-w-lg p-6 space-y-4 bg-[#17181e] border border-[#272a34] shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-[#272a34] pb-3">
+                <div class="flex items-center space-x-2.5">
+                    <span class="accent-blue-pill p-2 rounded-lg text-sm">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </span>
+                    <h3 class="text-sm font-bold text-white" id="grantModalTitle">Add Highway Safety Grant</h3>
+                </div>
+                <button onclick="closeModal('grantModal')" class="text-[#848e9f] hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <form id="grantForm" onsubmit="handleGrantSubmit(event)" class="space-y-3.5 text-xs">
+                <input type="hidden" id="grantId">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Grant Code <span class="text-rose-400">*</span></label>
+                        <input type="text" id="grantCodeInput" required placeholder="e.g. HVE-2026" class="w-full px-3 py-2 rounded-lg font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Program Status</label>
+                        <select id="grantStatusInput" class="w-full px-3 py-2 rounded-lg">
+                            <option value="Active">Active</option>
+                            <option value="Upcoming">Upcoming</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[#cbd5e1] font-semibold mb-1">Grant Program Name <span class="text-rose-400">*</span></label>
+                    <input type="text" id="grantNameInput" required placeholder="e.g. NHTSA High Visibility Enforcement" class="w-full px-3 py-2 rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block text-[#cbd5e1] font-semibold mb-1">Funding Agency / Catalog #</label>
+                    <input type="text" id="grantAgencyInput" placeholder="e.g. State DOT / NHTSA CFDA #20.600" class="w-full px-3 py-2 rounded-lg">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Reimbursable Budget ($) <span class="text-rose-400">*</span></label>
+                        <input type="number" id="grantBudgetInput" step="500" min="1000" required placeholder="45000" class="w-full px-3 py-2 rounded-lg font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Allocated Hours Cap <span class="text-rose-400">*</span></label>
+                        <input type="number" id="grantHoursCapInput" step="1" min="10" required placeholder="180" class="w-full px-3 py-2 rounded-lg font-mono">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Grant Start Date</label>
+                        <input type="date" id="grantStartDateInput" class="w-full px-3 py-2 rounded-lg font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[#cbd5e1] font-semibold mb-1">Grant End Date</label>
+                        <input type="date" id="grantEndDateInput" class="w-full px-3 py-2 rounded-lg font-mono">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[#cbd5e1] font-semibold mb-1">Strategic Enforcement Focus</label>
+                    <input type="text" id="grantFocusInput" placeholder="e.g. Speed corridor saturation & seat belt compliance" class="w-full px-3 py-2 rounded-lg">
+                </div>
+
+                <div class="pt-3 border-t border-[#272a34] flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('grantModal')" class="px-4 py-2 rounded-lg text-xs font-medium text-[#848e9f] hover:text-white bg-[#1c1e25] border border-[#272a34]">
+                        Cancel
+                    </button>
+                    <button type="submit" class="accent-blue-button px-5 py-2 rounded-lg text-xs font-semibold">
+                        Save Grant Program
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ============================================================
+         SHIFT DETAILS MODAL (FOR INSPECTING CALLS & 17 STATS)
+         ============================================================ -->
+    <div id="shiftDetailsModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+        <div class="card-premium w-full max-w-2xl p-6 space-y-4 bg-[#17181e] border border-[#272a34] shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-[#272a34] pb-3">
+                <div class="flex items-center space-x-3">
+                    <span class="accent-blue-icon-box p-2 rounded-lg">
+                        <i class="fa-solid fa-file-shield text-sm"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white" id="modalShiftTitle">Shift Enforcement Breakdown</h3>
+                        <p class="text-xs text-[#848e9f]" id="modalShiftSubtitle">Audit record</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('shiftDetailsModal')" class="text-[#848e9f] hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <!-- Content Injected Dynamically -->
+            <div id="modalShiftContent" class="space-y-4 text-xs">
+            </div>
+
+            <div class="pt-3 border-t border-[#272a34] flex justify-end">
+                <button onclick="closeModal('shiftDetailsModal')" class="accent-blue-button px-4 py-2 rounded-lg text-xs font-semibold">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ============================================================
+         SHIFT PREVIEW / CONFIRMATION MODAL
+         ============================================================ -->
+    <div id="shiftPreviewModal" class="fixed inset-0 z-[150] hidden items-center justify-center modal-backdrop p-4">
+        <div class="card-premium w-full max-w-2xl bg-[#17181e] border border-[#272a34] shadow-2xl relative max-h-[90vh] overflow-y-auto rounded-xl">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-[#272a34] px-6 py-4">
+                <div class="flex items-center space-x-3">
+                    <span class="accent-blue-icon-box p-2 rounded-lg">
+                        <i class="fa-solid fa-magnifying-glass-chart text-sm"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Review Shift Before Submitting</h3>
+                        <p class="text-xs text-[#848e9f]">Verify all stats are correct — confirm to save permanently.</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('shiftPreviewModal')" class="text-[#848e9f] hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-5 text-xs">
+
+                <!-- Basic Info -->
+                <div>
+                    <p class="text-[11px] font-semibold text-[#848e9f] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-info text-[#60a5fa]"></i> Shift Information
+                    </p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div class="bg-[#121318] border border-[#272a34] rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Date</p>
+                            <p class="font-semibold text-white mt-0.5" id="previewDate">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-[#272a34] rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Time Start</p>
+                            <p class="font-semibold text-white mt-0.5" id="previewTimeStart">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-[#272a34] rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Time End</p>
+                            <p class="font-semibold text-white mt-0.5" id="previewTimeEnd">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-[#272a34] rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Officer</p>
+                            <p class="font-semibold text-white mt-0.5" id="previewOfficer">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-[#272a34] rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Shift / Grant Type</p>
+                            <p class="font-semibold text-white mt-0.5" id="previewShiftType">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-[#272a34] rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Unit</p>
+                            <p class="font-semibold text-white mt-0.5" id="previewUnit">—</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hours & Mileage -->
+                <div>
+                    <p class="text-[11px] font-semibold text-[#848e9f] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-clock text-[#60a5fa]"></i> Hours &amp; Mileage
+                    </p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div class="bg-[#121318] border border-[#272a34] rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Total Hours</p>
+                            <p class="font-bold text-white mt-0.5 font-mono" id="previewTotalHours">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-blue-500/20 rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Grant Hours</p>
+                            <p class="font-bold text-[#60a5fa] mt-0.5 font-mono" id="previewGrantHours">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-amber-500/20 rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Dept Billed Hrs</p>
+                            <p class="font-bold text-amber-400 mt-0.5 font-mono" id="previewDeptHours">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-emerald-500/20 rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Grant Wage Claim</p>
+                            <p class="font-bold text-emerald-400 mt-0.5 font-mono" id="previewGrantWage">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-[#272a34] rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">Start Mileage</p>
+                            <p class="font-semibold text-white mt-0.5 font-mono" id="previewStartMileage">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-[#272a34] rounded-lg p-2.5">
+                            <p class="text-[10px] text-[#848e9f]">End Mileage</p>
+                            <p class="font-semibold text-white mt-0.5 font-mono" id="previewEndMileage">—</p>
+                        </div>
+                        <div class="bg-[#121318] border border-[#272a34] rounded-lg p-2.5 col-span-2">
+                            <p class="text-[10px] text-[#848e9f]">Total Miles Driven</p>
+                            <p class="font-bold text-white mt-0.5 font-mono" id="previewTotalMiles">—</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Traffic Metrics -->
+                <div>
+                    <p class="text-[11px] font-semibold text-[#848e9f] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-bar text-[#60a5fa]"></i> Enforcement Metrics
+                    </p>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 gap-2" id="previewMetricsGrid">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+
+                <!-- Dept Calls -->
+                <div id="previewCallsSection" class="hidden">
+                    <p class="text-[11px] font-semibold text-[#848e9f] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-radio text-amber-400"></i> Department-Billed Calls
+                    </p>
+                    <div id="previewCallsList" class="space-y-1.5"></div>
+                </div>
+
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="border-t border-[#272a34] px-6 py-4 flex items-center justify-between gap-3">
+                <button onclick="closeModal('shiftPreviewModal')" class="px-5 py-2.5 rounded-lg text-xs font-semibold text-[#848e9f] hover:text-white bg-[#1c1e25] border border-[#272a34] hover:bg-[#22252e] transition flex items-center space-x-2">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <span>Go Back &amp; Edit</span>
+                </button>
+                <button onclick="confirmShiftSave()" class="accent-blue-button px-6 py-2.5 rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-lg">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Confirm &amp; Save Shift</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 hidden transform translate-y-10 opacity-0 transition-all duration-300">
+        <div class="bg-[#1c1e25] border border-blue-500/30 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3">
+            <span id="toastIcon" class="accent-blue-pill p-1.5 rounded-md"><i class="fa-solid fa-check text-xs"></i></span>
+            <span id="toastMsg" class="text-xs font-medium">Action completed successfully.</span>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
