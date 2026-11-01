@@ -52,38 +52,31 @@ async function loadAllDataFromCloud() {
         const healthRes = await fetch(`${API_BASE}/health`, { cache: 'no-store' });
         if (!healthRes.ok) throw new Error('Backend health check failed');
 
-        // 1. Shifts from PostgreSQL
+        // 1. Shifts from PostgreSQL (Cloud is source of truth)
         const shiftsRes = await fetch(`${API_BASE}/shifts`, { cache: 'no-store' });
         if (shiftsRes.ok) {
             const cloudShifts = await shiftsRes.json();
             if (Array.isArray(cloudShifts)) {
-                if (cloudShifts.length > 0) {
-                    shiftLogs = cloudShifts;
-                    localStorage.setItem('shieldstat_shifts_v2', JSON.stringify(shiftLogs));
-                } else if (shiftLogs.length > 0) {
-                    // Seed initial shifts to empty cloud database
-                    for (const s of shiftLogs) {
-                        await saveShiftToCloud(s, false);
-                    }
-                }
+                shiftLogs = cloudShifts;
+                localStorage.setItem('shieldstat_shifts_v2', JSON.stringify(shiftLogs));
             }
         }
 
-        // 2. Officers from PostgreSQL
+        // 2. Officers from PostgreSQL (Cloud is source of truth)
         const officersRes = await fetch(`${API_BASE}/officers`, { cache: 'no-store' });
         if (officersRes.ok) {
             const cloudOfficers = await officersRes.json();
-            if (Array.isArray(cloudOfficers) && cloudOfficers.length > 0) {
+            if (Array.isArray(cloudOfficers)) {
                 officers = cloudOfficers;
                 localStorage.setItem('shieldstat_officers', JSON.stringify(officers));
             }
         }
 
-        // 3. Grants from PostgreSQL
+        // 3. Grants from PostgreSQL (Cloud is source of truth)
         const grantsRes = await fetch(`${API_BASE}/grants`, { cache: 'no-store' });
         if (grantsRes.ok) {
             const cloudGrants = await grantsRes.json();
-            if (Array.isArray(cloudGrants) && cloudGrants.length > 0) {
+            if (Array.isArray(cloudGrants)) {
                 grants = cloudGrants;
                 localStorage.setItem('shieldstat_grants', JSON.stringify(grants));
             }
@@ -350,249 +343,14 @@ function clearAllData() {
 // Dynamic Date Range Reporting, Officer Hourly Pay & Grant Management
 // ==========================================================================
 
-// 1. OFFICERS STATE (Includes Hourly Pay Rate for Budgeting)
-let officers = JSON.parse(localStorage.getItem('shieldstat_officers')) || [
-    { id: 1, name: 'Miller', badge: '#412', rank: 'Officer', hourlyRate: 68.50 },
-    { id: 2, name: 'Vance', badge: '#204', rank: 'Sergeant', hourlyRate: 82.00 },
-    { id: 3, name: 'Davis', badge: '#511', rank: 'Officer', hourlyRate: 64.00 },
-    { id: 4, name: 'Chen', badge: '#318', rank: 'Officer', hourlyRate: 66.50 },
-    { id: 5, name: 'Reynolds', badge: '#109', rank: 'Corporal', hourlyRate: 72.00 }
-];
+// 1. OFFICERS STATE (Synced from PostgreSQL Database)
+let officers = JSON.parse(localStorage.getItem('shieldstat_officers')) || [];
 
-// 2. GRANTS STATE (Dynamic Add, Edit, Delete)
-let grants = JSON.parse(localStorage.getItem('shieldstat_grants')) || [
-    { 
-        id: 1, 
-        code: 'HVE-2026', 
-        name: 'NHTSA High Visibility Enforcement', 
-        agency: 'State DOT / NHTSA CFDA #20.600',
-        budget: 45000.00, 
-        allocatedHours: 180.0, 
-        startDate: '2026-10-01', 
-        endDate: '2026-12-31', 
-        status: 'Active', 
-        focus: 'Speed corridor saturation & seat belt compliance' 
-    },
-    { 
-        id: 2, 
-        code: 'ID-2026', 
-        name: 'State Impaired Driving Crackdown', 
-        agency: 'State Highway Safety Office',
-        budget: 25000.00, 
-        allocatedHours: 100.0, 
-        startDate: '2026-10-15', 
-        endDate: '2027-01-15', 
-        status: 'Active', 
-        focus: 'Nighttime DUI checkpoints & roving patrols' 
-    },
-    { 
-        id: 3, 
-        code: 'STEP-2027', 
-        name: 'Selective Traffic Enforcement Program', 
-        agency: 'Governor Highway Safety Program',
-        budget: 18000.00, 
-        allocatedHours: 75.0, 
-        startDate: '2027-01-01', 
-        endDate: '2027-03-31', 
-        status: 'Upcoming', 
-        focus: 'School zones & distracted driver enforcement' 
-    }
-];
+// 2. GRANTS STATE (Synced from PostgreSQL Database)
+let grants = JSON.parse(localStorage.getItem('shieldstat_grants')) || [];
 
-// 3. SHIFT LOGS STATE
-let shiftLogs = JSON.parse(localStorage.getItem('shieldstat_shifts_v2')) || [
-    { 
-        id: 1, 
-        date: '2026-10-24', 
-        timeStart: '07:00',
-        timeEnd: '15:00',
-        startMileage: 42100.0,
-        endMileage: 42172.5,
-        totalMiles: 72.5,
-        officer: 'Ofc. Miller (#412)', 
-        type: 'HVE-2026', 
-        unit: 'Cruiser 14',
-        hours: 8.0, 
-        totalHours: 8.0,
-        deptHours: 1.0,
-        grantHours: 7.0,
-        stops: 14, 
-        citations: 8, 
-        duis: 1,
-        felonies: 0,
-        stolenVehicles: 0,
-        calls: [
-            { type: 'Assisted an Officer', caseNumber: 'CAD-26-8941', minutes: 45, hours: 0.75, notes: 'Cover unit on felony warrant search' },
-            { type: 'Took a Call (Service)', caseNumber: '26-10492', minutes: 15, hours: 0.25, notes: 'Dispatched debris removal in traffic lane' }
-        ],
-        stats: {
-            stops: 14,
-            dui_alcohol: 1, dui_drugs: 0, dui_both: 0, underage_alcohol: 0,
-            seat_belt: 3, child_seat_belt: 1,
-            speeding: 4, reckless_driving: 0, texting: 1, bike_ped: 0,
-            no_insurance: 1, suspended_license: 1, motorcycle_endorsement: 0,
-            felony_arrest: 0, stolen_vehicles: 0, fugitives: 0
-        }
-    },
-    { 
-        id: 2, 
-        date: '2026-10-25', 
-        timeStart: '14:00',
-        timeEnd: '00:00',
-        startMileage: 42172.5,
-        endMileage: 42255.0,
-        totalMiles: 82.5,
-        officer: 'Sgt. Vance (#204)', 
-        type: 'Regular Patrol', 
-        unit: 'Interceptor 02',
-        hours: 10.0, 
-        totalHours: 10.0,
-        deptHours: 2.0,
-        grantHours: 8.0,
-        stops: 11, 
-        citations: 5, 
-        duis: 0, 
-        felonies: 1,
-        stolenVehicles: 1,
-        calls: [
-            { type: 'Assisted an Officer', caseNumber: 'CAD-26-9011', minutes: 120, hours: 2.0, notes: 'Assisted perimeter on commercial burglary alarm' }
-        ],
-        stats: {
-            stops: 11,
-            dui_alcohol: 0, dui_drugs: 0, dui_both: 0, underage_alcohol: 0,
-            seat_belt: 2, child_seat_belt: 0,
-            speeding: 2, reckless_driving: 1, texting: 0, bike_ped: 0,
-            no_insurance: 1, suspended_license: 0, motorcycle_endorsement: 0,
-            felony_arrest: 1, stolen_vehicles: 1, fugitives: 1
-        }
-    },
-    { 
-        id: 3, 
-        date: '2026-10-26', 
-        timeStart: '08:00',
-        timeEnd: '16:00',
-        startMileage: 42255.0,
-        endMileage: 42322.0,
-        totalMiles: 67.0,
-        officer: 'Ofc. Davis (#511)', 
-        type: 'HVE-2026', 
-        unit: 'Cruiser 18',
-        hours: 8.0, 
-        totalHours: 8.0,
-        deptHours: 0.5,
-        grantHours: 7.5,
-        stops: 13, 
-        citations: 9, 
-        duis: 1, 
-        felonies: 0,
-        stolenVehicles: 0,
-        calls: [
-            { type: 'Took a Call (Service)', caseNumber: '26-10515', minutes: 30, hours: 0.5, notes: 'Traffic signal failure intersection control' }
-        ],
-        stats: {
-            stops: 13,
-            dui_alcohol: 0, dui_drugs: 1, dui_both: 0, underage_alcohol: 1,
-            seat_belt: 2, child_seat_belt: 1,
-            speeding: 5, reckless_driving: 0, texting: 2, bike_ped: 0,
-            no_insurance: 0, suspended_license: 2, motorcycle_endorsement: 0,
-            felony_arrest: 0, stolen_vehicles: 0, fugitives: 0
-        }
-    },
-    { 
-        id: 4, 
-        date: '2026-10-28', 
-        timeStart: '07:00',
-        timeEnd: '15:00',
-        startMileage: 42322.0,
-        endMileage: 42386.4,
-        totalMiles: 64.4,
-        officer: 'Ofc. Miller (#412)', 
-        type: 'ID-2026', 
-        unit: 'Cruiser 14',
-        hours: 8.0, 
-        totalHours: 8.0,
-        deptHours: 0.0,
-        grantHours: 8.0,
-        stops: 8, 
-        citations: 4, 
-        duis: 0, 
-        felonies: 0,
-        stolenVehicles: 0,
-        calls: [],
-        stats: {
-            stops: 8,
-            dui_alcohol: 0, dui_drugs: 0, dui_both: 0, underage_alcohol: 0,
-            seat_belt: 1, child_seat_belt: 0,
-            speeding: 3, reckless_driving: 0, texting: 0, bike_ped: 1,
-            no_insurance: 0, suspended_license: 1, motorcycle_endorsement: 1,
-            felony_arrest: 0, stolen_vehicles: 0, fugitives: 0
-        }
-    },
-    { 
-        id: 5, 
-        date: '2026-10-30', 
-        timeStart: '18:00',
-        timeEnd: '02:30',
-        startMileage: 42386.4,
-        endMileage: 42475.0,
-        totalMiles: 88.6,
-        officer: 'Ofc. Chen (#318)', 
-        type: 'HVE-2026', 
-        unit: 'Cruiser 09',
-        hours: 8.5, 
-        totalHours: 8.5,
-        deptHours: 1.5,
-        grantHours: 7.0,
-        stops: 15, 
-        citations: 9, 
-        duis: 2, 
-        felonies: 1,
-        stolenVehicles: 0,
-        calls: [
-            { type: 'Assisted an Officer', caseNumber: 'CAD-26-9188', minutes: 90, hours: 1.5, notes: 'K9 assist on stolen vehicle track' }
-        ],
-        stats: {
-            stops: 15,
-            dui_alcohol: 1, dui_drugs: 0, dui_both: 1, underage_alcohol: 0,
-            seat_belt: 3, child_seat_belt: 0,
-            speeding: 4, reckless_driving: 1, texting: 1, bike_ped: 0,
-            no_insurance: 1, suspended_license: 1, motorcycle_endorsement: 0,
-            felony_arrest: 1, stolen_vehicles: 0, fugitives: 1
-        }
-    },
-    { 
-        id: 6, 
-        date: '2026-10-31', 
-        timeStart: '20:00',
-        timeEnd: '06:00',
-        startMileage: 42475.0,
-        endMileage: 42580.2,
-        totalMiles: 105.2,
-        officer: 'Sgt. Vance (#204)', 
-        type: 'HVE-2026', 
-        unit: 'Interceptor 02',
-        hours: 10.0, 
-        totalHours: 10.0,
-        deptHours: 1.0,
-        grantHours: 9.0,
-        stops: 12, 
-        citations: 7, 
-        duis: 2, 
-        felonies: 1,
-        stolenVehicles: 1,
-        calls: [
-            { type: 'Assisted an Officer', caseNumber: 'CAD-26-9240', minutes: 60, hours: 1.0, notes: 'Cover on fight in progress outside venue' }
-        ],
-        stats: {
-            stops: 12,
-            dui_alcohol: 2, dui_drugs: 0, dui_both: 0, underage_alcohol: 1,
-            seat_belt: 2, child_seat_belt: 1,
-            speeding: 3, reckless_driving: 1, texting: 1, bike_ped: 0,
-            no_insurance: 1, suspended_license: 0, motorcycle_endorsement: 0,
-            felony_arrest: 1, stolen_vehicles: 1, fugitives: 0
-        }
-    }
-];
+// 3. SHIFT LOGS STATE (Synced from PostgreSQL Database)
+let shiftLogs = JSON.parse(localStorage.getItem('shieldstat_shifts_v2')) || [];
 
 let violationChartInstance = null;
 let hoursChartInstance = null;
@@ -635,6 +393,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Connect to PostgreSQL cloud backend and fetch live shifts
     loadAllDataFromCloud();
 });
+
+// Auto-sync across multiple browsers/devices when window regains focus
+window.addEventListener('focus', () => {
+    loadAllDataFromCloud();
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        loadAllDataFromCloud();
+    }
+});
+// Periodic background sync every 12 seconds so side-by-side browsers stay updated
+setInterval(() => {
+    loadAllDataFromCloud();
+}, 12000);
+
 
 // Helper: Get an officer's hourly rate by name/badge
 function getOfficerHourlyRate(officerString) {
