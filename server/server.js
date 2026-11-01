@@ -100,6 +100,33 @@ async function initDB() {
       value TEXT
     );
   `);
+
+  // Seed default officers if table is empty
+  const offCount = await pool.query('SELECT COUNT(*) FROM officers');
+  if (parseInt(offCount.rows[0].count) === 0) {
+    await pool.query(`
+      INSERT INTO officers (name, badge, rank, hourly_rate) VALUES
+        ('Miller', '#412', 'Officer', 68.50),
+        ('Vance', '#204', 'Sergeant', 82.00),
+        ('Davis', '#511', 'Officer', 64.00),
+        ('Chen', '#318', 'Officer', 66.50),
+        ('Reynolds', '#109', 'Corporal', 72.00)
+    `);
+    console.log('🌱 Seeded default officer roster.');
+  }
+
+  // Seed default grants if table is empty
+  const grantCount = await pool.query('SELECT COUNT(*) FROM grants');
+  if (parseInt(grantCount.rows[0].count) === 0) {
+    await pool.query(`
+      INSERT INTO grants (code, name, agency, budget, allocated_hours, start_date, end_date, status, focus) VALUES
+        ('HVE-2026', 'NHTSA High Visibility Enforcement', 'State DOT / NHTSA CFDA #20.600', 45000.00, 180.0, '2026-10-01', '2026-12-31', 'Active', 'Speed corridor saturation & seat belt compliance'),
+        ('ID-2026', 'State Impaired Driving Crackdown', 'State Highway Safety Office', 25000.00, 100.0, '2026-10-15', '2027-01-15', 'Active', 'Nighttime DUI checkpoints & roving patrols'),
+        ('STEP-2027', 'Selective Traffic Enforcement Program', 'Governor Highway Safety Program', 18000.00, 75.0, '2027-01-01', '2027-03-31', 'Upcoming', 'School zones & distracted driver enforcement')
+    `);
+    console.log('🌱 Seeded default grant programs.');
+  }
+
   console.log('✅ Database tables ready.');
 }
 initDB().catch(err => console.error('DB init error:', err));
@@ -382,5 +409,16 @@ app.post('/api/settings', async (req, res) => {
 // ==========================================================================
 // START
 // ==========================================================================
-const PORT = 5001;
-app.listen(PORT, () => console.log(`🚀 ShieldStat server running on port ${PORT}`));
+// Serve index.html for any frontend client-side routes (non-API)
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  const rootIndex = path.join(__dirname, '..', 'index.html');
+  const localIndex = path.join(__dirname, 'index.html');
+  const fs = require('fs');
+  if (fs.existsSync(rootIndex)) return res.sendFile(rootIndex);
+  if (fs.existsSync(localIndex)) return res.sendFile(localIndex);
+  next();
+});
+
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 ShieldStat server running on port ${PORT}`));

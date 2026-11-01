@@ -1,58 +1,237 @@
 // ==========================================================================
-// LOGIN / AUTH
-// Single-user credentials stored (hashed in a simple way) in a config object.
-// Change USERNAME and PASSWORD here to set your login credentials.
+// ShieldStat Cloud API & PostgreSQL Synchronization Layer
+// Works seamlessly on Render web services, custom domains, and local instances
 // ==========================================================================
 
-const AUTH_CONFIG = {
-    username: '629',
-    // Simple obfuscated password check — change the value below to your desired password
-    password: 'Tacos101!'
-};
+const API_BASE = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+    ? `${window.location.origin}/api`
+    : 'http://localhost:5001/api';
 
-function checkLoginState() {
-    const session = sessionStorage.getItem('shieldstat_auth');
-    if (session === 'authenticated') {
-        hideLoginOverlay();
-    }
-    // else overlay stays visible
-}
+let isCloudConnected = false;
 
-function handleLogin(e) {
-    e.preventDefault();
-    const u = document.getElementById('loginUsername').value.trim();
-    const p = document.getElementById('loginPassword').value;
-    const errEl = document.getElementById('loginError');
+function updateCloudStatusBadge(connected, shiftCount) {
+    isCloudConnected = connected;
+    const badge = document.getElementById('cloudDbBadge');
+    const anim = document.getElementById('cloudPingAnim');
+    const dot = document.getElementById('cloudPingDot');
+    const text = document.getElementById('cloudDbText');
+    const settingsStatus = document.getElementById('settingsDbStatus');
+    const settingsCount = document.getElementById('settingsCloudShiftCount');
 
-    if (u === AUTH_CONFIG.username && p === AUTH_CONFIG.password) {
-        sessionStorage.setItem('shieldstat_auth', 'authenticated');
-        errEl.classList.add('hidden');
-        hideLoginOverlay();
+    if (badge) badge.classList.remove('hidden');
+
+    if (connected) {
+        if (anim) {
+            anim.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+            anim.style.display = '';
+        }
+        if (dot) dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-emerald-500';
+        if (text) text.innerHTML = `Database: <strong class="text-emerald-400 font-medium">PostgreSQL Live</strong>`;
+        if (settingsStatus) {
+            settingsStatus.innerText = 'CONNECTED';
+            settingsStatus.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        }
     } else {
-        errEl.classList.remove('hidden');
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('loginPassword').focus();
+        if (anim) anim.style.display = 'none';
+        if (dot) dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-amber-500';
+        if (text) text.innerHTML = `Database: <strong class="text-amber-400 font-medium">Local Cache</strong>`;
+        if (settingsStatus) {
+            settingsStatus.innerText = 'OFFLINE / CACHED';
+            settingsStatus.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        }
+    }
+
+    if (settingsCount) {
+        settingsCount.innerText = (shiftCount !== undefined ? shiftCount : shiftLogs.length) + ' shifts recorded';
     }
 }
 
-function hideLoginOverlay() {
-    const overlay = document.getElementById('loginOverlay');
-    if (overlay) {
-        overlay.style.transition = 'opacity 0.4s ease';
-        overlay.style.opacity = '0';
-        setTimeout(() => overlay.classList.add('hidden'), 400);
+// ── Load All Data From PostgreSQL Cloud ──────────────────────────────────────
+async function loadAllDataFromCloud() {
+    try {
+        const healthRes = await fetch(`${API_BASE}/health`, { cache: 'no-store' });
+        if (!healthRes.ok) throw new Error('Backend health check failed');
+
+        // 1. Shifts from PostgreSQL
+        const shiftsRes = await fetch(`${API_BASE}/shifts`, { cache: 'no-store' });
+        if (shiftsRes.ok) {
+            const cloudShifts = await shiftsRes.json();
+            if (Array.isArray(cloudShifts)) {
+                if (cloudShifts.length > 0) {
+                    shiftLogs = cloudShifts;
+                    localStorage.setItem('shieldstat_shifts_v2', JSON.stringify(shiftLogs));
+                } else if (shiftLogs.length > 0) {
+                    // Seed initial shifts to empty cloud database
+                    for (const s of shiftLogs) {
+                        await saveShiftToCloud(s, false);
+                    }
+                }
+            }
+        }
+
+        // 2. Officers from PostgreSQL
+        const officersRes = await fetch(`${API_BASE}/officers`, { cache: 'no-store' });
+        if (officersRes.ok) {
+            const cloudOfficers = await officersRes.json();
+            if (Array.isArray(cloudOfficers) && cloudOfficers.length > 0) {
+                officers = cloudOfficers;
+                localStorage.setItem('shieldstat_officers', JSON.stringify(officers));
+            }
+        }
+
+        // 3. Grants from PostgreSQL
+        const grantsRes = await fetch(`${API_BASE}/grants`, { cache: 'no-store' });
+        if (grantsRes.ok) {
+            const cloudGrants = await grantsRes.json();
+            if (Array.isArray(cloudGrants) && cloudGrants.length > 0) {
+                grants = cloudGrants;
+                localStorage.setItem('shieldstat_grants', JSON.stringify(grants));
+            }
+        }
+
+        // 4. App Settings from PostgreSQL
+        const settingsRes = await fetch(`${API_BASE}/settings`, { cache: 'no-store' });
+        if (settingsRes.ok) {
+            const cloudSettings = await settingsRes.json();
+            if (cloudSettings && Object.keys(cloudSettings).length > 0) {
+                appSettings = { ...appSettings, ...cloudSettings };
+                localStorage.setItem('shieldstat_settings', JSON.stringify(appSettings));
+            }
+        }
+
+        updateCloudStatusBadge(true, shiftLogs.length);
+        applyAppSettings();
+        populateSelectOptions();
+        updateDashboardMetrics();
+        renderRecentShifts();
+        renderShiftsTable();
+        renderOfficersTab();
+        renderGrantsTab();
+        renderReportSummary();
+        updateCharts();
+
+    } catch (err) {
+        console.warn('PostgreSQL cloud sync unavailable, using local cache:', err.message);
+        updateCloudStatusBadge(false, shiftLogs.length);
     }
 }
 
-function toggleLoginPasswordVisibility() {
-    const input = document.getElementById('loginPassword');
-    const icon = document.getElementById('loginPasswordEyeIcon');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.classList.replace('fa-eye', 'fa-eye-slash');
-    } else {
-        input.type = 'password';
-        icon.classList.replace('fa-eye-slash', 'fa-eye');
+// ── Cloud Persistence Helpers ────────────────────────────────────────────────
+async function saveShiftToCloud(shiftData, shouldRefresh = true) {
+    try {
+        const response = await fetch(`${API_BASE}/shifts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(shiftData)
+        });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const saved = await response.json();
+        
+        // Link the cloud auto-increment ID to our local shift entry
+        const idx = shiftLogs.findIndex(s => s.id === shiftData.id);
+        if (idx !== -1 && saved.id) {
+            shiftLogs[idx].id = saved.id;
+            localStorage.setItem('shieldstat_shifts_v2', JSON.stringify(shiftLogs));
+        }
+
+        updateCloudStatusBadge(true, shiftLogs.length);
+        if (shouldRefresh) {
+            updateDashboardMetrics();
+            renderRecentShifts();
+            renderShiftsTable();
+            renderReportSummary();
+        }
+        return saved;
+    } catch (err) {
+        console.error('Error saving shift to PostgreSQL:', err);
+        updateCloudStatusBadge(false, shiftLogs.length);
+        return null;
+    }
+}
+
+async function deleteShiftFromCloud(id) {
+    try {
+        const response = await fetch(`${API_BASE}/shifts/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        updateCloudStatusBadge(true, shiftLogs.length);
+    } catch (err) {
+        console.error('Error deleting shift from PostgreSQL:', err);
+        updateCloudStatusBadge(false, shiftLogs.length);
+    }
+}
+
+async function clearAllShiftsFromCloud() {
+    try {
+        await fetch(`${API_BASE}/shifts`, { method: 'DELETE' });
+        updateCloudStatusBadge(true, 0);
+    } catch (err) {
+        console.error('Error clearing shifts from cloud:', err);
+    }
+}
+
+async function syncOfficerToCloud(officer, isNew = false) {
+    try {
+        const url = isNew ? `${API_BASE}/officers` : `${API_BASE}/officers/${officer.id}`;
+        const method = isNew ? 'POST' : 'PUT';
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(officer)
+        });
+        if (res.ok && isNew) {
+            const saved = await res.json();
+            officer.id = saved.id;
+            localStorage.setItem('shieldstat_officers', JSON.stringify(officers));
+        }
+    } catch (err) {
+        console.error('Error syncing officer to cloud:', err);
+    }
+}
+
+async function deleteOfficerFromCloud(id) {
+    try {
+        await fetch(`${API_BASE}/officers/${id}`, { method: 'DELETE' });
+    } catch (err) {
+        console.error('Error deleting officer from cloud:', err);
+    }
+}
+
+async function syncGrantToCloud(grant, isNew = false) {
+    try {
+        const url = isNew ? `${API_BASE}/grants` : `${API_BASE}/grants/${grant.id}`;
+        const method = isNew ? 'POST' : 'PUT';
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(grant)
+        });
+        if (res.ok && isNew) {
+            const saved = await res.json();
+            grant.id = saved.id;
+            localStorage.setItem('shieldstat_grants', JSON.stringify(grants));
+        }
+    } catch (err) {
+        console.error('Error syncing grant to cloud:', err);
+    }
+}
+
+async function deleteGrantFromCloud(id) {
+    try {
+        await fetch(`${API_BASE}/grants/${id}`, { method: 'DELETE' });
+    } catch (err) {
+        console.error('Error deleting grant from cloud:', err);
+    }
+}
+
+async function saveSettingsToCloud(settings) {
+    try {
+        await fetch(`${API_BASE}/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+    } catch (err) {
+        console.error('Error saving settings to cloud:', err);
     }
 }
 
@@ -64,8 +243,6 @@ let appSettings = JSON.parse(localStorage.getItem('shieldstat_settings')) || {
     divisionUnit: 'Grant Unit',
     squadName: 'Squad Charlie',
     appTitle: 'ShieldStat',
-    loginUsername: 'admin',
-    loginPassword: 'shieldstat2026',
     defaultGrantHours: 180,
     fiscalYearStart: '10-01',
     reportFooterNote: 'I certify under penalty of perjury that this report accurately reflects hours worked, vehicle patrol mileage, and traffic safety enforcement actions conducted under the designated traffic grant program.',
@@ -87,10 +264,6 @@ function applyAppSettings() {
     // Header brand title
     const brandTitle = document.getElementById('headerBrandTitle');
     if (brandTitle) brandTitle.textContent = appSettings.appTitle;
-
-    // Update live login credentials
-    AUTH_CONFIG.username = appSettings.loginUsername;
-    AUTH_CONFIG.password = appSettings.loginPassword;
 }
 
 function renderSettingsTab() {
@@ -103,29 +276,25 @@ function renderSettingsTab() {
     setVal('settingDivisionUnit',   s.divisionUnit);
     setVal('settingSquadName',      s.squadName);
     setVal('settingAppTitle',       s.appTitle);
-    setVal('settingLoginUsername',  s.loginUsername);
-    setVal('settingLoginPassword',  s.loginPassword);
     setVal('settingDefaultHours',   s.defaultGrantHours);
     setVal('settingFiscalYearStart',s.fiscalYearStart);
     setVal('settingReportFooter',   s.reportFooterNote);
     setChk('settingShowDeptCalls',  s.showDeptCallsOnReport);
     setChk('settingRequireCase',    s.requireCaseNumber);
+
+    updateCloudStatusBadge(isCloudConnected, shiftLogs.length);
 }
 
 function saveSettingsForm() {
     const getVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
     const getChk = id => { const el = document.getElementById(id); return el ? el.checked : false; };
 
-    if (!getVal('settingDeptName'))      { showToast('Department name cannot be blank.', true); return; }
-    if (!getVal('settingLoginUsername')) { showToast('Username cannot be blank.', true); return; }
-    if (!getVal('settingLoginPassword')) { showToast('Password cannot be blank.', true); return; }
+    if (!getVal('settingDeptName')) { showToast('Department name cannot be blank.', true); return; }
 
     appSettings.departmentName       = getVal('settingDeptName');
     appSettings.divisionUnit         = getVal('settingDivisionUnit');
     appSettings.squadName            = getVal('settingSquadName');
     appSettings.appTitle             = getVal('settingAppTitle');
-    appSettings.loginUsername        = getVal('settingLoginUsername');
-    appSettings.loginPassword        = getVal('settingLoginPassword');
     appSettings.defaultGrantHours    = parseFloat(getVal('settingDefaultHours')) || 180;
     appSettings.fiscalYearStart      = getVal('settingFiscalYearStart');
     appSettings.reportFooterNote     = getVal('settingReportFooter');
@@ -134,34 +303,36 @@ function saveSettingsForm() {
 
     saveAppSettings();
     applyAppSettings();
-    showToast('Settings saved successfully.');
+    saveSettingsToCloud(appSettings);
+    showToast('Settings saved and synchronized with database.');
 }
 
 function resetAppSettings() {
     if (!confirm('Reset all settings to factory defaults? This will not delete your shifts, officers, or grants.')) return;
     localStorage.removeItem('shieldstat_settings');
-    appSettings = JSON.parse(localStorage.getItem('shieldstat_settings')) || {
+    appSettings = {
         departmentName: 'Metro Traffic Division',
         divisionUnit: 'Grant Unit',
         squadName: 'Squad Charlie',
         appTitle: 'ShieldStat',
-        loginUsername: 'admin',
-        loginPassword: 'shieldstat2026',
         defaultGrantHours: 180,
         fiscalYearStart: '10-01',
         reportFooterNote: 'I certify under penalty of perjury that this report accurately reflects hours worked, vehicle patrol mileage, and traffic safety enforcement actions conducted under the designated traffic grant program.',
         showDeptCallsOnReport: true,
         requireCaseNumber: true
     };
+    saveAppSettings();
     applyAppSettings();
     renderSettingsTab();
+    saveSettingsToCloud(appSettings);
     showToast('Settings reset to defaults.');
 }
 
 function clearAllData() {
-    if (!confirm('⚠️ This will permanently delete ALL shift logs. Officers and grants will be kept. This cannot be undone. Continue?')) return;
+    if (!confirm('⚠️ This will permanently delete ALL shift logs from both cloud and local storage. Officers and grants will be kept. This cannot be undone. Continue?')) return;
     shiftLogs = [];
     localStorage.setItem('shieldstat_shifts_v2', JSON.stringify(shiftLogs));
+    clearAllShiftsFromCloud();
     updateDashboardMetrics();
     renderRecentShifts();
     renderShiftsTable();
@@ -170,19 +341,6 @@ function clearAllData() {
     renderReportSummary();
     updateCharts();
     showToast('All shift logs cleared.', true);
-}
-
-function toggleSettingsPassword() {
-    const input = document.getElementById('settingLoginPassword');
-    const icon  = document.getElementById('settingsPasswordEye');
-    if (!input) return;
-    if (input.type === 'password') {
-        input.type = 'text';
-        if (icon) icon.classList.replace('fa-eye', 'fa-eye-slash');
-    } else {
-        input.type = 'password';
-        if (icon) icon.classList.replace('fa-eye-slash', 'fa-eye');
-    }
 }
 
 // ==========================================================================
@@ -464,7 +622,6 @@ let trackerCounters = {
 let trackerCalls = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-    checkLoginState();
     applyAppSettings();
     initReportDates();
     populateSelectOptions();
@@ -475,6 +632,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderGrantsTab();
     renderReportSummary();
     initCharts();
+    // Connect to PostgreSQL cloud backend and fetch live shifts
+    loadAllDataFromCloud();
 });
 
 // Helper: Get an officer's hourly rate by name/badge
@@ -1080,6 +1239,9 @@ function confirmShiftSave() {
     renderReportSummary();
     updateCharts();
 
+    // Persist to PostgreSQL database on Render
+    saveShiftToCloud(saved);
+
     switchTab('shifts');
     showToast(`Shift saved: ${saved.grantHours}h Grant OT, ${saved.deptHours}h Dept Calls, ${saved.citations} citations.`);
 }
@@ -1092,6 +1254,7 @@ function deleteShift(id) {
     if (confirm('Are you sure you want to delete this shift log entry? This will update grant totals and officer wage spend.')) {
         shiftLogs = shiftLogs.filter(item => item.id !== id);
         localStorage.setItem('shieldstat_shifts_v2', JSON.stringify(shiftLogs));
+        deleteShiftFromCloud(id);
         updateDashboardMetrics();
         renderRecentShifts();
         renderShiftsTable();
@@ -1443,6 +1606,8 @@ function handleOfficerSubmit(e) {
     }
 
     localStorage.setItem('shieldstat_officers', JSON.stringify(officers));
+    const targetOff = id ? officers.find(o => o.id === parseInt(id)) : officers[officers.length - 1];
+    if (targetOff) syncOfficerToCloud(targetOff, !id);
     closeModal('officerModal');
     populateSelectOptions();
     renderOfficersTab();
@@ -1471,6 +1636,7 @@ function handleQuickRateSubmit(e) {
     if (off) {
         off.hourlyRate = rate;
         localStorage.setItem('shieldstat_officers', JSON.stringify(officers));
+        syncOfficerToCloud(off, false);
         closeModal('editHourlyRateModal');
         populateSelectOptions();
         renderOfficersTab();
@@ -1489,6 +1655,7 @@ function deleteOfficer(id) {
     if (confirm(`Are you sure you want to delete ${off.name} (${off.badge}) from the officer roster?`)) {
         officers = officers.filter(o => o.id !== id);
         localStorage.setItem('shieldstat_officers', JSON.stringify(officers));
+        deleteOfficerFromCloud(id);
         populateSelectOptions();
         renderOfficersTab();
         updateDashboardMetrics();
@@ -1622,6 +1789,8 @@ function handleGrantSubmit(e) {
     }
 
     localStorage.setItem('shieldstat_grants', JSON.stringify(grants));
+    const targetGrant = id ? grants.find(g => g.id === parseInt(id)) : grants[grants.length - 1];
+    if (targetGrant) syncGrantToCloud(targetGrant, !id);
     closeModal('grantModal');
     populateSelectOptions();
     renderGrantsTab();
@@ -1637,6 +1806,7 @@ function deleteGrant(id) {
     if (confirm(`Are you sure you want to delete grant ${g.code} (${g.name})?`)) {
         grants = grants.filter(item => item.id !== id);
         localStorage.setItem('shieldstat_grants', JSON.stringify(grants));
+        deleteGrantFromCloud(id);
         populateSelectOptions();
         renderGrantsTab();
         updateDashboardMetrics();
@@ -2487,64 +2657,3 @@ function initCharts() {
 function updateCharts() {
     initCharts();
 }
-// 1. Fetch all existing shifts from your Node/PostgreSQL backend when the page loads
-async function loadShiftsFromCloud() {
-  try {
-    const response = await fetch('http://localhost:5001/api/shifts');
-    if (!response.ok) throw new Error('Failed to fetch shifts from database');
-    
-    const shifts = await response.json();
-    
-    // Update your app's global shift array and redraw your UI
-    shiftLogs = shifts; 
-    updateDashboardMetrics();
-    renderShiftsTable();
-  } catch (err) {
-    console.error("Error loading shifts:", err);
-  }
-}
-
-// 2. Save a new shift to your Node/PostgreSQL backend when an officer submits the form
-async function saveShiftToCloud(shiftData) {
-  try {
-    const response = await fetch('http://localhost:5001/api/shifts', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(shiftData)
-    });
-    
-    if (!response.ok) throw new Error('Failed to save shift to database');
-    
-    const savedShift = await response.json();
-    console.log("Successfully saved shift:", savedShift);
-    
-    // Refresh the UI with the latest data from the database
-    loadShiftsFromCloud();
-  } catch (err) {
-    console.error("Error saving shift:", err);
-  }
-}
-// Example form submit listener
-document.getElementById('shiftForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  
-  const shiftData = {
-    date: document.getElementById('shiftDate').value,
-    officer: document.getElementById('officerName').value,
-    type: document.getElementById('grantType').value,
-    hours: parseFloat(document.getElementById('hoursWorked').value),
-    stops: parseInt(document.getElementById('stopsCount').value) || 0,
-    citations: parseInt(document.getElementById('citationsCount').value) || 0,
-    warnings: parseInt(document.getElementById('warningsCount').value) || 0,
-    duis: parseInt(document.getElementById('duisCount').value) || 0,
-    arrests: parseInt(document.getElementById('arrestsCount').value) || 0
-  };
-
-  // Send it to your PostgreSQL database via your backend!
-  saveShiftToCloud(shiftData);
-  
-  // Reset the form
-  this.reset();
-});
