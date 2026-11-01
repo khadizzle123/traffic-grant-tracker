@@ -2490,7 +2490,7 @@ function updateCharts() {
 // 1. Fetch all existing shifts from your Node/PostgreSQL backend when the page loads
 async function loadShiftsFromCloud() {
   try {
-    const response = await fetch('http://localhost:5000/api/shifts');
+    const response = await fetch('http://localhost:5001/api/shifts');
     if (!response.ok) throw new Error('Failed to fetch shifts from database');
     
     const shifts = await response.json();
@@ -2507,7 +2507,7 @@ async function loadShiftsFromCloud() {
 // 2. Save a new shift to your Node/PostgreSQL backend when an officer submits the form
 async function saveShiftToCloud(shiftData) {
   try {
-    const response = await fetch('http://localhost:5000/api/shifts', {
+    const response = await fetch('http://localhost:5001/api/shifts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
