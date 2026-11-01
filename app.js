@@ -57,6 +57,135 @@ function toggleLoginPasswordVisibility() {
 }
 
 // ==========================================================================
+// APP SETTINGS STATE
+// ==========================================================================
+let appSettings = JSON.parse(localStorage.getItem('shieldstat_settings')) || {
+    departmentName: 'Metro Traffic Division',
+    divisionUnit: 'Grant Unit',
+    squadName: 'Squad Charlie',
+    appTitle: 'ShieldStat',
+    loginUsername: 'admin',
+    loginPassword: 'shieldstat2026',
+    defaultGrantHours: 180,
+    fiscalYearStart: '10-01',
+    reportFooterNote: 'I certify under penalty of perjury that this report accurately reflects hours worked, vehicle patrol mileage, and traffic safety enforcement actions conducted under the designated traffic grant program.',
+    showDeptCallsOnReport: true,
+    requireCaseNumber: true
+};
+
+function saveAppSettings() {
+    localStorage.setItem('shieldstat_settings', JSON.stringify(appSettings));
+}
+
+function applyAppSettings() {
+    // Sidebar department card
+    const deptNameEl = document.getElementById('sidebarDeptName');
+    const deptSubEl  = document.getElementById('sidebarDeptSub');
+    if (deptNameEl) deptNameEl.textContent = appSettings.departmentName;
+    if (deptSubEl)  deptSubEl.textContent  = `${appSettings.divisionUnit} • ${appSettings.squadName}`;
+
+    // Header brand title
+    const brandTitle = document.getElementById('headerBrandTitle');
+    if (brandTitle) brandTitle.textContent = appSettings.appTitle;
+
+    // Update live login credentials
+    AUTH_CONFIG.username = appSettings.loginUsername;
+    AUTH_CONFIG.password = appSettings.loginPassword;
+}
+
+function renderSettingsTab() {
+    const s = appSettings;
+
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+
+    setVal('settingDeptName',       s.departmentName);
+    setVal('settingDivisionUnit',   s.divisionUnit);
+    setVal('settingSquadName',      s.squadName);
+    setVal('settingAppTitle',       s.appTitle);
+    setVal('settingLoginUsername',  s.loginUsername);
+    setVal('settingLoginPassword',  s.loginPassword);
+    setVal('settingDefaultHours',   s.defaultGrantHours);
+    setVal('settingFiscalYearStart',s.fiscalYearStart);
+    setVal('settingReportFooter',   s.reportFooterNote);
+    setChk('settingShowDeptCalls',  s.showDeptCallsOnReport);
+    setChk('settingRequireCase',    s.requireCaseNumber);
+}
+
+function saveSettingsForm() {
+    const getVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const getChk = id => { const el = document.getElementById(id); return el ? el.checked : false; };
+
+    if (!getVal('settingDeptName'))      { showToast('Department name cannot be blank.', true); return; }
+    if (!getVal('settingLoginUsername')) { showToast('Username cannot be blank.', true); return; }
+    if (!getVal('settingLoginPassword')) { showToast('Password cannot be blank.', true); return; }
+
+    appSettings.departmentName       = getVal('settingDeptName');
+    appSettings.divisionUnit         = getVal('settingDivisionUnit');
+    appSettings.squadName            = getVal('settingSquadName');
+    appSettings.appTitle             = getVal('settingAppTitle');
+    appSettings.loginUsername        = getVal('settingLoginUsername');
+    appSettings.loginPassword        = getVal('settingLoginPassword');
+    appSettings.defaultGrantHours    = parseFloat(getVal('settingDefaultHours')) || 180;
+    appSettings.fiscalYearStart      = getVal('settingFiscalYearStart');
+    appSettings.reportFooterNote     = getVal('settingReportFooter');
+    appSettings.showDeptCallsOnReport= getChk('settingShowDeptCalls');
+    appSettings.requireCaseNumber    = getChk('settingRequireCase');
+
+    saveAppSettings();
+    applyAppSettings();
+    showToast('Settings saved successfully.');
+}
+
+function resetAppSettings() {
+    if (!confirm('Reset all settings to factory defaults? This will not delete your shifts, officers, or grants.')) return;
+    localStorage.removeItem('shieldstat_settings');
+    appSettings = JSON.parse(localStorage.getItem('shieldstat_settings')) || {
+        departmentName: 'Metro Traffic Division',
+        divisionUnit: 'Grant Unit',
+        squadName: 'Squad Charlie',
+        appTitle: 'ShieldStat',
+        loginUsername: 'admin',
+        loginPassword: 'shieldstat2026',
+        defaultGrantHours: 180,
+        fiscalYearStart: '10-01',
+        reportFooterNote: 'I certify under penalty of perjury that this report accurately reflects hours worked, vehicle patrol mileage, and traffic safety enforcement actions conducted under the designated traffic grant program.',
+        showDeptCallsOnReport: true,
+        requireCaseNumber: true
+    };
+    applyAppSettings();
+    renderSettingsTab();
+    showToast('Settings reset to defaults.');
+}
+
+function clearAllData() {
+    if (!confirm('⚠️ This will permanently delete ALL shift logs. Officers and grants will be kept. This cannot be undone. Continue?')) return;
+    shiftLogs = [];
+    localStorage.setItem('shieldstat_shifts_v2', JSON.stringify(shiftLogs));
+    updateDashboardMetrics();
+    renderRecentShifts();
+    renderShiftsTable();
+    renderOfficersTab();
+    renderGrantsTab();
+    renderReportSummary();
+    updateCharts();
+    showToast('All shift logs cleared.', true);
+}
+
+function toggleSettingsPassword() {
+    const input = document.getElementById('settingLoginPassword');
+    const icon  = document.getElementById('settingsPasswordEye');
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+        input.type = 'password';
+        if (icon) icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+}
+
+// ==========================================================================
 // ShieldStat Core Application Logic & State Management
 // Premium Dark Charcoal & Dark Blue Accents
 // Audit Segregation: Grant Overtime vs Department Billed Calls & Assists
@@ -336,6 +465,7 @@ let trackerCalls = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     checkLoginState();
+    applyAppSettings();
     initReportDates();
     populateSelectOptions();
     updateDashboardMetrics();
@@ -366,7 +496,7 @@ function getOfficerObject(officerString) {
 // ==========================================================================
 
 function switchTab(tabId) {
-    const tabs = ['dashboard', 'shifts', 'officers', 'grants', 'reports'];
+    const tabs = ['dashboard', 'shifts', 'officers', 'grants', 'reports', 'settings'];
     
     tabs.forEach(t => {
         const el = document.getElementById(`tab-${t}`);
@@ -399,6 +529,7 @@ function switchTab(tabId) {
     if (tabId === 'officers') renderOfficersTab();
     if (tabId === 'grants') renderGrantsTab();
     if (tabId === 'reports') renderReportSummary();
+    if (tabId === 'settings') renderSettingsTab();
 }
 
 function openModal(modalId) {
@@ -2356,3 +2487,64 @@ function initCharts() {
 function updateCharts() {
     initCharts();
 }
+// 1. Fetch all existing shifts from your Node/PostgreSQL backend when the page loads
+async function loadShiftsFromCloud() {
+  try {
+    const response = await fetch('http://localhost:5000/api/shifts');
+    if (!response.ok) throw new Error('Failed to fetch shifts from database');
+    
+    const shifts = await response.json();
+    
+    // Update your app's global shift array and redraw your UI
+    shiftLogs = shifts; 
+    updateDashboardMetrics();
+    renderShiftsTable();
+  } catch (err) {
+    console.error("Error loading shifts:", err);
+  }
+}
+
+// 2. Save a new shift to your Node/PostgreSQL backend when an officer submits the form
+async function saveShiftToCloud(shiftData) {
+  try {
+    const response = await fetch('http://localhost:5000/api/shifts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(shiftData)
+    });
+    
+    if (!response.ok) throw new Error('Failed to save shift to database');
+    
+    const savedShift = await response.json();
+    console.log("Successfully saved shift:", savedShift);
+    
+    // Refresh the UI with the latest data from the database
+    loadShiftsFromCloud();
+  } catch (err) {
+    console.error("Error saving shift:", err);
+  }
+}
+// Example form submit listener
+document.getElementById('shiftForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const shiftData = {
+    date: document.getElementById('shiftDate').value,
+    officer: document.getElementById('officerName').value,
+    type: document.getElementById('grantType').value,
+    hours: parseFloat(document.getElementById('hoursWorked').value),
+    stops: parseInt(document.getElementById('stopsCount').value) || 0,
+    citations: parseInt(document.getElementById('citationsCount').value) || 0,
+    warnings: parseInt(document.getElementById('warningsCount').value) || 0,
+    duis: parseInt(document.getElementById('duisCount').value) || 0,
+    arrests: parseInt(document.getElementById('arrestsCount').value) || 0
+  };
+
+  // Send it to your PostgreSQL database via your backend!
+  saveShiftToCloud(shiftData);
+  
+  // Reset the form
+  this.reset();
+});

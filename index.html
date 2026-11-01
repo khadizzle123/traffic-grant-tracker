@@ -129,7 +129,7 @@
                 </div>
                 <div>
                     <div class="flex items-center space-x-2">
-                        <h1 class="text-lg font-bold tracking-tight text-white">ShieldStat</h1>
+                        <h1 class="text-lg font-bold tracking-tight text-white" id="headerBrandTitle">ShieldStat</h1>
                         <span class="text-[11px] font-mono px-2 py-0.5 rounded-md accent-blue-pill font-semibold">v1.3 BUDGET & PAYROLL</span>
                     </div>
                     <p class="text-xs text-[#848e9f]">Traffic Enforcement & Grant Allocation System</p>
@@ -202,6 +202,10 @@
                     <i class="fa-solid fa-print w-5 text-[#848e9f]"></i>
                     <span>Reports & Export</span>
                 </button>
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-link w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-[#848e9f] transition">
+                    <i class="fa-solid fa-gear w-5 text-[#848e9f]"></i>
+                    <span>Settings</span>
+                </button>
             </nav>
 
             <!-- Grant Burn Rate & Dept Billed Split Card -->
@@ -238,8 +242,8 @@
                     <i class="fa-solid fa-id-badge text-base"></i>
                 </div>
                 <div class="min-w-0 flex-1">
-                    <p class="text-xs font-semibold text-white truncate">Metro Traffic Division</p>
-                    <p class="text-[11px] text-[#848e9f] truncate">Grant Unit • Squad Charlie</p>
+                    <p class="text-xs font-semibold text-white truncate" id="sidebarDeptName">Metro Traffic Division</p>
+                    <p class="text-[11px] text-[#848e9f] truncate" id="sidebarDeptSub">Grant Unit • Squad Charlie</p>
                 </div>
             </div>
         </aside>
@@ -886,6 +890,179 @@
                         </div>
                     </div>
                 </div>
+            </section>
+
+
+            <!-- ============================================================
+                 6. SETTINGS TAB
+                 ============================================================ -->
+            <section id="tab-settings" class="hidden space-y-6">
+
+                <!-- Page Header -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-gear text-[#60a5fa]"></i> System Settings
+                        </h2>
+                        <p class="text-xs text-[#848e9f] mt-0.5">Configure your department info, login credentials, and system preferences.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="resetAppSettings()" class="px-3.5 py-2 rounded-lg text-xs font-medium text-[#848e9f] hover:text-white bg-[#1c1e25] border border-[#272a34] hover:bg-[#22252e] transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-rotate-left text-xs"></i>
+                            <span>Reset Defaults</span>
+                        </button>
+                        <button onclick="saveSettingsForm()" class="accent-blue-button px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-lg">
+                            <i class="fa-solid fa-floppy-disk text-xs"></i>
+                            <span>Save Settings</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                    <!-- ── Department Identity ── -->
+                    <div class="card-premium p-5 space-y-4">
+                        <div class="border-b border-[#272a34] pb-3">
+                            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-building-shield text-[#60a5fa]"></i> Department Identity
+                            </h3>
+                            <p class="text-xs text-[#848e9f] mt-0.5">Displayed in the sidebar and on all printed reports.</p>
+                        </div>
+                        <div class="space-y-3 text-xs">
+                            <div>
+                                <label class="block text-[#848e9f] font-medium mb-1.5">Department / Division Name</label>
+                                <input type="text" id="settingDeptName" placeholder="e.g. Metro Traffic Division"
+                                    class="w-full px-3 py-2.5 rounded-lg bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60 placeholder-[#4e5566]" />
+                            </div>
+                            <div>
+                                <label class="block text-[#848e9f] font-medium mb-1.5">Unit / Team Name</label>
+                                <input type="text" id="settingDivisionUnit" placeholder="e.g. Grant Unit"
+                                    class="w-full px-3 py-2.5 rounded-lg bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60 placeholder-[#4e5566]" />
+                            </div>
+                            <div>
+                                <label class="block text-[#848e9f] font-medium mb-1.5">Squad / Group Name</label>
+                                <input type="text" id="settingSquadName" placeholder="e.g. Squad Charlie"
+                                    class="w-full px-3 py-2.5 rounded-lg bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60 placeholder-[#4e5566]" />
+                            </div>
+                            <div>
+                                <label class="block text-[#848e9f] font-medium mb-1.5">App / System Name</label>
+                                <input type="text" id="settingAppTitle" placeholder="e.g. ShieldStat"
+                                    class="w-full px-3 py-2.5 rounded-lg bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60 placeholder-[#4e5566]" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Login Credentials ── -->
+                    <div class="card-premium p-5 space-y-4">
+                        <div class="border-b border-[#272a34] pb-3">
+                            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-lock text-[#60a5fa]"></i> Login Credentials
+                            </h3>
+                            <p class="text-xs text-[#848e9f] mt-0.5">Change your username and password for the login screen.</p>
+                        </div>
+                        <div class="space-y-3 text-xs">
+                            <div>
+                                <label class="block text-[#848e9f] font-medium mb-1.5">Username</label>
+                                <input type="text" id="settingLoginUsername" autocomplete="off"
+                                    class="w-full px-3 py-2.5 rounded-lg bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60 placeholder-[#4e5566]" />
+                            </div>
+                            <div>
+                                <label class="block text-[#848e9f] font-medium mb-1.5">Password</label>
+                                <div class="relative">
+                                    <input type="password" id="settingLoginPassword" autocomplete="new-password"
+                                        class="w-full px-3 py-2.5 rounded-lg bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60 placeholder-[#4e5566] pr-10" />
+                                    <button type="button" onclick="toggleSettingsPassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#848e9f] hover:text-white">
+                                        <i id="settingsPasswordEye" class="fa-solid fa-eye text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-[11px] flex items-start gap-2">
+                                <i class="fa-solid fa-triangle-exclamation mt-0.5 shrink-0"></i>
+                                <span>After saving, your new credentials will take effect on the next login. Write them down before saving.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Grant &amp; Budget Defaults ── -->
+                    <div class="card-premium p-5 space-y-4">
+                        <div class="border-b border-[#272a34] pb-3">
+                            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-file-invoice-dollar text-[#60a5fa]"></i> Grant &amp; Budget Defaults
+                            </h3>
+                            <p class="text-xs text-[#848e9f] mt-0.5">Default values used when creating new grants.</p>
+                        </div>
+                        <div class="space-y-3 text-xs">
+                            <div>
+                                <label class="block text-[#848e9f] font-medium mb-1.5">Default Allocated Grant Hours</label>
+                                <input type="number" id="settingDefaultHours" min="1" step="0.5"
+                                    class="w-full px-3 py-2.5 rounded-lg bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60" />
+                            </div>
+                            <div>
+                                <label class="block text-[#848e9f] font-medium mb-1.5">Fiscal Year Start (MM-DD)</label>
+                                <input type="text" id="settingFiscalYearStart" placeholder="e.g. 10-01"
+                                    class="w-full px-3 py-2.5 rounded-lg bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60 placeholder-[#4e5566]" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Report &amp; Tracker Preferences ── -->
+                    <div class="card-premium p-5 space-y-4">
+                        <div class="border-b border-[#272a34] pb-3">
+                            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-sliders text-[#60a5fa]"></i> Report &amp; Tracker Preferences
+                            </h3>
+                            <p class="text-xs text-[#848e9f] mt-0.5">Control how the tracker and reports behave.</p>
+                        </div>
+                        <div class="space-y-4 text-xs">
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" id="settingShowDeptCalls" class="mt-0.5 accent-blue-500 w-4 h-4 rounded shrink-0" />
+                                <div>
+                                    <p class="font-medium text-white">Show Dept-Billed Calls on Reports</p>
+                                    <p class="text-[#848e9f] text-[11px] mt-0.5">Include department-funded call/assist records as an audit section in printed reports.</p>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" id="settingRequireCase" class="mt-0.5 accent-blue-500 w-4 h-4 rounded shrink-0" />
+                                <div>
+                                    <p class="font-medium text-white">Require Case Number for Calls &amp; Assists</p>
+                                    <p class="text-[#848e9f] text-[11px] mt-0.5">Force officers to enter a case/CAD number when logging an assist or service call.</p>
+                                </div>
+                            </label>
+                            <div>
+                                <label class="block text-[#848e9f] font-medium mb-1.5">Report Certification Footer Note</label>
+                                <textarea id="settingReportFooter" rows="4"
+                                    class="w-full px-3 py-2.5 rounded-lg bg-[#121318] border border-[#272a34] text-white focus:outline-none focus:border-blue-500/60 text-[11px] leading-relaxed resize-none"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ── Danger Zone ── -->
+                <div class="card-premium p-5 border border-red-500/20 space-y-3">
+                    <div class="flex items-center gap-2 mb-1">
+                        <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
+                        <h3 class="text-sm font-semibold text-red-300">Danger Zone</h3>
+                    </div>
+                    <div class="flex items-center justify-between py-3 border-t border-[#272a34]">
+                        <div class="text-xs">
+                            <p class="font-medium text-white">Clear All Shift Logs</p>
+                            <p class="text-[#848e9f] mt-0.5">Permanently delete every logged shift. Officers and grants are kept. Cannot be undone.</p>
+                        </div>
+                        <button onclick="clearAllData()" class="px-4 py-2 rounded-lg text-xs font-semibold text-red-300 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition shrink-0 ml-4">
+                            <i class="fa-solid fa-trash-can mr-1.5"></i> Clear Shift Logs
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Save Button Bottom -->
+                <div class="flex justify-end">
+                    <button onclick="saveSettingsForm()" class="accent-blue-button px-6 py-2.5 rounded-lg text-sm font-semibold flex items-center space-x-2 shadow-lg">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Save All Settings</span>
+                    </button>
+                </div>
+
             </section>
 
         </main>
